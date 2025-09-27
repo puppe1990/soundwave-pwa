@@ -28,6 +28,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
   const wasPlayingRef = useRef(false); // Track if audio was playing before track change
   const hasUserInteractedRef = useRef(false); // Track if user has interacted with audio
   const manuallyPausedRef = useRef(false); // Track if user manually paused (vs natural track end)
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -107,10 +108,22 @@ export const useAudioPlayer = (tracks: Track[]) => {
       // Auto-play if audio was playing before track change
       if (wasPlayingRef.current) {
         console.log(`🔄 TRACK CHANGE: Auto-playing "${currentTrack.title}" (was playing before)`);
-        // Use setTimeout to ensure the audio source is fully loaded
-        setTimeout(() => {
-          play();
-        }, 100);
+        
+        // For mobile, check if user has interacted before attempting autoplay
+        if (isMobile && !hasUserInteractedRef.current) {
+          console.log(`📱 MOBILE TRACK CHANGE: User hasn't interacted, can't autoplay`);
+          // Show toast to guide user
+          toast({
+            title: "Tap to Play",
+            description: "Please tap the play button to continue playback on mobile devices.",
+            duration: 3000,
+          });
+        } else {
+          // Use setTimeout to ensure the audio source is fully loaded
+          setTimeout(() => {
+            play();
+          }, 100);
+        }
       }
     }
   }, [currentTrackIndex, volume]); // Use currentTrackIndex for stability
@@ -159,6 +172,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
           manuallyPausedRef.current = false; // Clear manual pause flag when playing
           wasPlayingRef.current = true; // Mark that we're playing
           console.log(`▶️ PLAY: Successfully started playback of "${currentTrack.title}"`);
+          console.log(`📱 MOBILE: User interaction recorded - future autoplay should work`);
         }
       } catch (error) {
         console.error('❌ PLAY: Error playing audio:', error);
@@ -239,6 +253,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
             manuallyPausedRef.current = false; // Clear manual pause flag when playing
             wasPlayingRef.current = true; // Mark that we're playing
             console.log(`📱 MOBILE: Successfully started playback via direct play() call`);
+            console.log(`📱 MOBILE: User interaction recorded - future autoplay should work`);
             return;
           }
         } catch (error) {
@@ -294,16 +309,61 @@ export const useAudioPlayer = (tracks: Track[]) => {
         if (audioRef.current && track) {
           try {
             audioRef.current.currentTime = 0;
-            const playPromise = audioRef.current.play();
-            if (playPromise !== undefined) {
-              await playPromise;
-              setIsPlaying(true);
-              console.log(`🔁 REPEAT ONE: Successfully replayed "${track.title}"`);
+            
+            // For mobile devices, we need to handle autoplay restrictions
+            if (isMobile) {
+              console.log(`📱 MOBILE REPEAT: Attempting to replay on mobile device`);
+              
+              // Check if user has interacted before attempting autoplay
+              if (hasUserInteractedRef.current) {
+                const playPromise = audioRef.current.play();
+                if (playPromise !== undefined) {
+                  await playPromise;
+                  setIsPlaying(true);
+                  console.log(`📱 MOBILE REPEAT: Successfully replayed "${track.title}"`);
+                }
+              } else {
+                // User hasn't interacted yet, can't autoplay on mobile
+                console.log(`📱 MOBILE REPEAT: User hasn't interacted, can't autoplay`);
+                setIsPlaying(false);
+                wasPlayingRef.current = false;
+                
+                // Show toast to guide user
+                toast({
+                  title: "Tap to Continue",
+                  description: "Please tap the play button to continue playback on mobile.",
+                  duration: 3000,
+                });
+              }
+            } else {
+              // Desktop - normal autoplay
+              const playPromise = audioRef.current.play();
+              if (playPromise !== undefined) {
+                await playPromise;
+                setIsPlaying(true);
+                console.log(`🔁 REPEAT ONE: Successfully replayed "${track.title}"`);
+              }
             }
           } catch (error) {
             console.error('❌ REPEAT ONE: Error replaying audio:', error);
+            console.error('❌ REPEAT ONE: Error details:', {
+              name: error.name,
+              message: error.message,
+              isMobile: isMobile,
+              hasUserInteracted: hasUserInteractedRef.current
+            });
+            
             setIsPlaying(false);
             wasPlayingRef.current = false; // Clear flag on error
+            
+            // Show appropriate message based on error type
+            if (error.name === 'NotAllowedError' || error.message.includes('autoplay')) {
+              toast({
+                title: "Tap to Continue",
+                description: "Please tap the play button to continue playback.",
+                duration: 3000,
+              });
+            }
           }
         }
       } else if (currentRepeatMode === 'all') {
@@ -311,15 +371,35 @@ export const useAudioPlayer = (tracks: Track[]) => {
         const nextIndex = (currentIndex + 1) % currentTracksLength;
         const nextTrack = tracks[nextIndex];
         console.log(`🔄 REPEAT ALL: Moving to next track "${nextTrack?.title}" (${nextIndex})`);
+        
+        // Store that we want to continue playing after track change
+        wasPlayingRef.current = true;
+        manuallyPausedRef.current = false;
+        
         setCurrentTrackIndex(nextIndex);
         setIsPlaying(false);
+        
+        // For mobile, we might need to wait for user interaction
+        if (isMobile && !hasUserInteractedRef.current) {
+          console.log(`📱 MOBILE REPEAT ALL: User hasn't interacted, will need manual play`);
+        }
       } else {
         // No repeat - go to next track
         const nextIndex = (currentIndex + 1) % currentTracksLength;
         const nextTrack = tracks[nextIndex];
         console.log(`⏭️ NO REPEAT: Moving to next track "${nextTrack?.title}" (${nextIndex})`);
+        
+        // Store that we want to continue playing after track change
+        wasPlayingRef.current = true;
+        manuallyPausedRef.current = false;
+        
         setCurrentTrackIndex(nextIndex);
         setIsPlaying(false);
+        
+        // For mobile, we might need to wait for user interaction
+        if (isMobile && !hasUserInteractedRef.current) {
+          console.log(`📱 MOBILE NO REPEAT: User hasn't interacted, will need manual play`);
+        }
       }
     } else {
       console.log(`🏁 TRACK ENDED: User manually paused or not playing, not auto-playing`);
