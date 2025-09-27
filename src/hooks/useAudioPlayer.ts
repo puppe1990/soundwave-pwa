@@ -27,6 +27,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
   const lastSeekTimeRef = useRef(0);
   const wasPlayingRef = useRef(false); // Track if audio was playing before track change
   const hasUserInteractedRef = useRef(false); // Track if user has interacted with audio
+  const manuallyPausedRef = useRef(false); // Track if user manually paused (vs natural track end)
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -155,6 +156,8 @@ export const useAudioPlayer = (tracks: Track[]) => {
           await Promise.race([playPromise, timeoutPromise]);
           setIsPlaying(true);
           hasUserInteractedRef.current = true; // Mark that user has successfully played audio
+          manuallyPausedRef.current = false; // Clear manual pause flag when playing
+          wasPlayingRef.current = true; // Mark that we're playing
           console.log(`▶️ PLAY: Successfully started playback of "${currentTrack.title}"`);
         }
       } catch (error) {
@@ -191,6 +194,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
       audioRef.current.pause();
       setIsPlaying(false);
       wasPlayingRef.current = false; // Clear the wasPlaying flag when manually pausing
+      manuallyPausedRef.current = true; // Mark that user manually paused
       console.log(`⏸️ PAUSE: Successfully paused "${currentTrack.title}"`);
     } else if (!currentTrack) {
       console.log(`⚠️ PAUSE: No current track to pause`);
@@ -213,6 +217,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
         audioRef.current.pause();
         setIsPlaying(false);
         wasPlayingRef.current = false; // Clear the wasPlaying flag when manually pausing
+        manuallyPausedRef.current = true; // Mark that user manually paused
         console.log(`⏸️ TOGGLE: Paused "${currentTrack?.title}"`);
       }
     } else {
@@ -231,6 +236,8 @@ export const useAudioPlayer = (tracks: Track[]) => {
           if (playPromise !== undefined) {
             await playPromise;
             setIsPlaying(true);
+            manuallyPausedRef.current = false; // Clear manual pause flag when playing
+            wasPlayingRef.current = true; // Mark that we're playing
             console.log(`📱 MOBILE: Successfully started playback via direct play() call`);
             return;
           }
@@ -258,6 +265,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
     
     // Store current play state before changing track
     wasPlayingRef.current = isPlaying;
+    manuallyPausedRef.current = false; // Clear manual pause flag when changing tracks
     console.log(`⏭️ NEXT: Storing play state: ${wasPlayingRef.current ? 'playing' : 'paused'}`);
     
     setCurrentTrackIndex(nextIndex);
@@ -274,9 +282,12 @@ export const useAudioPlayer = (tracks: Track[]) => {
     const track = tracks[currentIndex];
     
     console.log(`🏁 TRACK ENDED: "${track?.title}" finished playing (repeat mode: ${currentRepeatMode})`);
+    console.log(`🏁 TRACK ENDED: wasPlayingRef: ${wasPlayingRef.current}, manuallyPaused: ${manuallyPausedRef.current}`);
     
-    // Only auto-play if the user hasn't manually paused AND is currently playing
-    if (wasPlayingRef.current && isPlaying) {
+    // Only auto-play if the user was playing and didn't manually pause
+    // wasPlayingRef tracks if user was playing before track ended
+    // manuallyPausedRef tracks if user manually paused (vs natural track end)
+    if (wasPlayingRef.current && !manuallyPausedRef.current) {
       if (currentRepeatMode === 'one') {
         // Repeat current track - don't change track, just restart playback
         console.log(`🔁 REPEAT ONE: Replaying "${track?.title}"`);
@@ -292,6 +303,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
           } catch (error) {
             console.error('❌ REPEAT ONE: Error replaying audio:', error);
             setIsPlaying(false);
+            wasPlayingRef.current = false; // Clear flag on error
           }
         }
       } else if (currentRepeatMode === 'all') {
@@ -312,8 +324,12 @@ export const useAudioPlayer = (tracks: Track[]) => {
     } else {
       console.log(`🏁 TRACK ENDED: User manually paused or not playing, not auto-playing`);
       setIsPlaying(false);
+      // Clear the manually paused flag when track ends naturally (user didn't pause manually)
+      if (!manuallyPausedRef.current) {
+        wasPlayingRef.current = false; // Clear the wasPlaying flag when track ends naturally
+      }
     }
-  }, [repeatMode, currentTrackIndex, tracks, isPlaying]);
+  }, [repeatMode, currentTrackIndex, tracks]);
 
   // Update ended event listener when handleEnded changes
   useEffect(() => {
@@ -342,6 +358,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
     
     // Store current play state before changing track
     wasPlayingRef.current = isPlaying;
+    manuallyPausedRef.current = false; // Clear manual pause flag when changing tracks
     console.log(`⏮️ PREVIOUS: Storing play state: ${wasPlayingRef.current ? 'playing' : 'paused'}`);
     
     setCurrentTrackIndex(prevIndex);
@@ -399,6 +416,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
       
       // Store current play state before changing track
       wasPlayingRef.current = isPlaying;
+      manuallyPausedRef.current = false; // Clear manual pause flag when changing tracks
       console.log(`🎵 SELECT: Storing play state: ${wasPlayingRef.current ? 'playing' : 'paused'}`);
       
       setCurrentTrackIndex(trackIndex);
