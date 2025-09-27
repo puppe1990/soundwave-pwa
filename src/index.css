@@ -2,41 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Progressive Web App Audio Player Design System */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Dark theme optimized for audio player */
+    --background: 222 47% 4%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 222 47% 6%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 222 47% 6%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 222.2 47.4% 11.2%;
+    /* Audio player primary colors - vibrant purple */
+    --primary: 262 83% 58%;
     --primary-foreground: 210 40% 98%;
+    --primary-glow: 262 83% 70%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Glass morphism secondary */
+    --secondary: 222 47% 8%;
+    --secondary-foreground: 210 40% 90%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 222 47% 10%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent colors for audio controls */
+    --accent: 262 83% 58%;
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 222 47% 12%;
+    --input: 222 47% 8%;
+    --ring: 262 83% 58%;
 
-    --radius: 0.5rem;
+    --radius: 1rem;
+
+    /* Audio Player Specific Colors */
+    --player-bg: 222 47% 4%;
+    --player-card: 222 47% 6%;
+    --player-accent: 262 83% 58%;
+    --player-accent-glow: 262 83% 70%;
+    --audio-progress: 262 83% 58%;
+    --audio-progress-bg: 222 47% 12%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%), hsl(282 83% 48%));
+    --gradient-player: linear-gradient(145deg, hsl(222 47% 4%) 0%, hsl(222 47% 6%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(222 47% 6%) 0%, hsl(222 47% 8%) 100%);
+    --gradient-glass: linear-gradient(145deg, hsl(222 47% 8% / 0.8) 0%, hsl(222 47% 12% / 0.6) 100%);
+    
+    /* Shadows and Effects */
+    --shadow-player: 0 25px 50px -12px hsl(222 47% 2% / 0.8);
+    --shadow-glow: 0 0 30px hsl(262 83% 58% / 0.3);
+    --shadow-card: 0 10px 25px -5px hsl(222 47% 2% / 0.4);
+    
+    /* Animation */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
     --sidebar-background: 0 0% 98%;
 

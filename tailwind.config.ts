@@ -22,6 +22,7 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          glow: "hsl(var(--primary-glow))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -47,6 +48,16 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        player: {
+          bg: "hsl(var(--player-bg))",
+          card: "hsl(var(--player-card))",
+          accent: "hsl(var(--player-accent))",
+          "accent-glow": "hsl(var(--player-accent-glow))",
+        },
+        audio: {
+          progress: "hsl(var(--audio-progress))",
+          "progress-bg": "hsl(var(--audio-progress-bg))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -57,6 +68,21 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      backgroundImage: {
+        "gradient-primary": "var(--gradient-primary)",
+        "gradient-player": "var(--gradient-player)",
+        "gradient-card": "var(--gradient-card)",
+        "gradient-glass": "var(--gradient-glass)",
+      },
+      boxShadow: {
+        player: "var(--shadow-player)",
+        glow: "var(--shadow-glow)",
+        card: "var(--shadow-card)",
+      },
+      transitionTimingFunction: {
+        smooth: "var(--transition-smooth)",
+        bounce: "var(--transition-bounce)",
       },
       borderRadius: {
         lg: "var(--radius)",
