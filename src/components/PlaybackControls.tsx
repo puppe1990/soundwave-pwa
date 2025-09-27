@@ -105,18 +105,25 @@ export const PlaybackControls = ({
           variant="ghost"
           size="icon"
           onClick={onToggleRepeat}
-          className={`h-10 w-10 rounded-full hover:bg-secondary/50 transition-smooth ${
+          className={`h-10 w-10 rounded-full transition-all duration-300 hover:scale-105 ${
             repeatMode === 'none' 
-              ? 'text-muted-foreground hover:text-foreground' 
-              : 'text-primary'
+              ? 'text-muted-foreground hover:text-foreground hover:bg-secondary/50' 
+              : repeatMode === 'one'
+              ? 'text-primary bg-primary/10 hover:bg-primary/20 shadow-lg shadow-primary/20'
+              : 'text-primary bg-primary/10 hover:bg-primary/20 shadow-lg shadow-primary/20'
           }`}
           title={`Repeat: ${repeatMode === 'none' ? 'Off' : repeatMode === 'one' ? 'One' : 'All'}`}
         >
-          {repeatMode === 'one' ? (
-            <Repeat1 className="h-5 w-5" />
-          ) : (
-            <Repeat className="h-5 w-5" />
-          )}
+          <div className="relative">
+            {repeatMode === 'one' ? (
+              <Repeat1 className={`h-5 w-5 transition-all duration-300 ${repeatMode === 'one' ? 'animate-pulse' : ''}`} />
+            ) : (
+              <Repeat className={`h-5 w-5 transition-all duration-300 ${repeatMode === 'all' ? 'animate-spin-slow' : ''}`} />
+            )}
+            {repeatMode !== 'none' && (
+              <div className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full animate-ping" />
+            )}
+          </div>
         </Button>
       </div>
 

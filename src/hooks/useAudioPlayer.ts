@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Track {
   id: string;
@@ -32,6 +33,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
   const [volume, setVolume] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'none' | 'one' | 'all'>('none');
+  const { toast } = useToast();
 
   const currentTrack = tracks[currentTrackIndex] || null;
 
@@ -333,23 +335,49 @@ export const useAudioPlayer = (tracks: Track[]) => {
   const toggleRepeat = useCallback(() => {
     setRepeatMode(prev => {
       let newMode: 'none' | 'one' | 'all';
+      let toastTitle: string;
+      let toastDescription: string;
+      
       switch (prev) {
         case 'none':
           newMode = 'all';
+          toastTitle = '🔁 Repeat All';
+          toastDescription = 'Playlist will repeat continuously';
           break;
         case 'all':
           newMode = 'one';
+          toastTitle = '🔁 Repeat One';
+          toastDescription = 'Current track will repeat';
           break;
         case 'one':
           newMode = 'none';
+          toastTitle = '🔁 Repeat Off';
+          toastDescription = 'Normal playback mode';
           break;
         default:
           newMode = 'none';
+          toastTitle = '🔁 Repeat Off';
+          toastDescription = 'Normal playback mode';
       }
+      
       console.log(`🔁 REPEAT: Changed from "${prev}" to "${newMode}"`);
+      
+      // Add haptic feedback for mobile devices
+      if ('vibrate' in navigator) {
+        // Light haptic feedback for repeat mode change
+        navigator.vibrate(50);
+      }
+      
+      // Show toast notification with enhanced visual feedback
+      toast({
+        title: toastTitle,
+        description: toastDescription,
+        duration: 2000,
+      });
+      
       return newMode;
     });
-  }, []);
+  }, [toast]);
 
   return {
     currentTrack,
