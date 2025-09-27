@@ -28,6 +28,7 @@ export const useLocalStorage = () => {
   const [storedTracks, setStoredTracks] = useState<StoredTrack[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load tracks and folders from IndexedDB on initialization
   useEffect(() => {
@@ -83,10 +84,12 @@ export const useLocalStorage = () => {
         }
         
         setIsInitialized(true);
+        setIsLoading(false);
         console.log('✅ useLocalStorage initialized with IndexedDB');
       } catch (error) {
         console.error('❌ Error loading stored data:', error);
         setIsInitialized(true);
+        setIsLoading(false);
       }
     };
 
@@ -242,26 +245,43 @@ export const useLocalStorage = () => {
   }, [storedTracks, convertToTrack]);
 
   // Get tracks filtered by folder
-  const getTracksByFolder = useCallback(async (folderName?: string): Promise<Track[]> => {
+  const getTracksByFolder = useCallback(async (folderName?: string, forceRefresh: boolean = false): Promise<Track[]> => {
+    // Don't return tracks if still loading
+    if (isLoading || !isInitialized) {
+      console.log(`⏳ Still loading IndexedDB, returning empty tracks for: ${folderName || 'All Tracks'}`);
+      return [];
+    }
+    
     console.log(`🔍 Getting tracks for folder: ${folderName || 'All Tracks'}`);
+    
+    // If force refresh, get fresh tracks from IndexedDB
+    let tracksToUse = storedTracks;
+    if (forceRefresh) {
+      console.log(`🔄 Force refreshing tracks from IndexedDB...`);
+      tracksToUse = await indexedDBService.getTracks();
+      console.log(`🔄 Fresh tracks loaded: ${tracksToUse.length}`);
+    }
+    
     console.log(`🔍 storedTracks state length: ${storedTracks.length}`);
-    console.log(`🔍 Available tracks:`, storedTracks.map(t => ({ id: t.id, title: t.title, folder: t.folder })));
+    console.log(`🔍 tracksToUse length: ${tracksToUse.length}`);
+    console.log(`🔍 Available tracks:`, tracksToUse.map(t => ({ id: t.id, title: t.title, folder: t.folder })));
     
     if (!folderName || folderName === 'All Tracks') {
       // For "All Tracks", return all tracks regardless of folder
-      const allTracks = await getTracks();
+      const trackPromises = tracksToUse.map(convertToTrack);
+      const allTracks = await Promise.all(trackPromises);
       console.log(`📁 Returning ${allTracks.length} tracks for All Tracks`);
       return allTracks;
     }
     
-    const filteredTracks = storedTracks.filter(track => track.folder === folderName);
+    const filteredTracks = tracksToUse.filter(track => track.folder === folderName);
     console.log(`🔍 Filtered tracks for "${folderName}":`, filteredTracks.map(t => ({ id: t.id, title: t.title, folder: t.folder })));
     
     const trackPromises = filteredTracks.map(convertToTrack);
     const convertedTracks = await Promise.all(trackPromises);
     console.log(`📂 Found ${convertedTracks.length} tracks in folder "${folderName}"`);
     return convertedTracks;
-  }, [storedTracks, convertToTrack, getTracks]);
+  }, [storedTracks, convertToTrack, isLoading, isInitialized]);
 
   // Folder management functions
   const saveFolders = useCallback(async (foldersData: Folder[]) => {
@@ -349,6 +369,8 @@ export const useLocalStorage = () => {
   return {
     storedTracks,
     folders,
+    isLoading,
+    isInitialized,
     saveTracks,
     addTracks,
     removeTrack,

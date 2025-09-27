@@ -25,6 +25,8 @@ export const AudioPlayer = () => {
     removeTrack,
     storedTracks,
     folders,
+    isLoading: isStorageLoading,
+    isInitialized,
     createFolder,
     renameFolder,
     deleteFolder,
@@ -34,6 +36,12 @@ export const AudioPlayer = () => {
 
   // Load tracks based on folder selection
   useEffect(() => {
+    // Don't load tracks if still initializing
+    if (isStorageLoading || !isInitialized) {
+      console.log(`⏳ AudioPlayer: Waiting for IndexedDB initialization...`);
+      return;
+    }
+
     const loadTracks = async () => {
       try {
         console.log(`🎵 AudioPlayer: Loading tracks for folder: ${selectedFolder || 'All Tracks'}`);
@@ -46,7 +54,7 @@ export const AudioPlayer = () => {
     };
 
     loadTracks();
-  }, [selectedFolder, getTracksByFolder, storedTracks]);
+  }, [selectedFolder, getTracksByFolder, storedTracks, isStorageLoading, isInitialized]);
 
   // Handle clearing all stored tracks
   const handleClearStoredTracks = async () => {
@@ -109,13 +117,15 @@ export const AudioPlayer = () => {
 
   const handleTracksUploaded = async (newTracks: Track[]) => {
     console.log(`🎵 AudioPlayer: ${newTracks.length} tracks uploaded, reloading for folder: ${selectedFolder || 'All Tracks'}`);
-    // Reload tracks based on current folder selection
-    const tracksToLoad = await getTracksByFolder(selectedFolder);
+    
+    // Force refresh from IndexedDB to bypass stale state
+    const tracksToLoad = await getTracksByFolder(selectedFolder, true);
     setTracks(tracksToLoad);
+    console.log(`🎵 AudioPlayer: Reloaded ${tracksToLoad.length} tracks after upload`);
+    
     setShowUpload(false);
     // Open playlist modal to show the newly uploaded tracks
     setShowPlaylist(true);
-    console.log(`🎵 AudioPlayer: Reloaded ${tracksToLoad.length} tracks after upload`);
   };
 
   const handleFolderSelect = (folderName?: string) => {
