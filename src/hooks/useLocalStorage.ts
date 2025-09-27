@@ -141,9 +141,12 @@ export const useLocalStorage = () => {
       console.log(`💾 Saving ${tracks.length} tracks to IndexedDB...`);
       
       await indexedDBService.storeTracks(tracks);
-      setStoredTracks([...tracks]); // Force new array reference to trigger re-render
+      
+      // Reload tracks from IndexedDB to ensure state is in sync
+      const savedTracks = await indexedDBService.getTracks();
+      setStoredTracks(savedTracks);
       console.log('✅ Tracks saved successfully to IndexedDB');
-      console.log(`📊 setStoredTracks called with ${tracks.length} tracks`);
+      console.log(`📊 setStoredTracks called with ${savedTracks.length} tracks from IndexedDB`);
     } catch (error) {
       console.error('❌ Error saving tracks to IndexedDB:', error);
       throw error;

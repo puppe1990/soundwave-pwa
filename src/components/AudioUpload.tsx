@@ -46,11 +46,12 @@ export const AudioUpload = ({ onTracksUploaded }: AudioUploadProps) => {
         console.log(`📤 AudioUpload: Assigning folder "${selectedFolder || 'undefined'}" to tracks`);
         console.log(`📤 AudioUpload: Adding tracks to folder: ${selectedFolder || 'All Tracks'}`);
         
-        // Save to localStorage
+        // Save to IndexedDB
         await addTracks(tracksWithFolder);
         
-        // Convert to Track objects for the player
-        const tracks = tracksWithFolder.map(convertToTrack);
+        // Convert to Track objects for the player (convertToTrack is async)
+        const trackPromises = tracksWithFolder.map(track => convertToTrack(track));
+        const tracks = await Promise.all(trackPromises);
         onTracksUploaded(tracks);
         
         console.log(`📤 AudioUpload: Successfully uploaded ${storedTracks.length} tracks`);

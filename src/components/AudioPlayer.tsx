@@ -46,7 +46,7 @@ export const AudioPlayer = () => {
     };
 
     loadTracks();
-  }, [selectedFolder, getTracksByFolder]);
+  }, [selectedFolder, getTracksByFolder, storedTracks]);
 
   // Handle clearing all stored tracks
   const handleClearStoredTracks = async () => {
