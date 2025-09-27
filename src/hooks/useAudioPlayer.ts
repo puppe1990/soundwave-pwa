@@ -23,7 +23,7 @@ export interface AudioPlayerState {
 
 export const useAudioPlayer = (tracks: Track[]) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const isReplayingRef = useRef(false);
+  const lastSeekTimeRef = useRef(0);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -38,6 +38,8 @@ export const useAudioPlayer = (tracks: Track[]) => {
   useEffect(() => {
     audioRef.current = new Audio();
     const audio = audioRef.current;
+    
+    console.log(`🎵 AUDIO INIT: Creating new audio element`);
 
     const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
@@ -46,13 +48,20 @@ export const useAudioPlayer = (tracks: Track[]) => {
     const handleLoadedMetadata = () => {
       setDuration(audio.duration);
       setIsLoading(false);
+      console.log(`🎵 AUDIO INIT: Metadata loaded, duration: ${audio.duration}s`);
     };
 
     const handleLoadStart = () => {
       setIsLoading(true);
+      console.log(`🎵 AUDIO INIT: Load started`);
     };
 
     const handleCanPlayThrough = () => {
+      setIsLoading(false);
+    };
+
+    const handleError = (e: Event) => {
+      console.error(`🎵 AUDIO INIT: Audio error:`, e);
       setIsLoading(false);
     };
 
@@ -60,12 +69,15 @@ export const useAudioPlayer = (tracks: Track[]) => {
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('loadstart', handleLoadStart);
     audio.addEventListener('canplaythrough', handleCanPlayThrough);
+    audio.addEventListener('error', handleError);
 
     return () => {
+      console.log(`🎵 AUDIO INIT: Cleaning up audio element`);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('loadstart', handleLoadStart);
       audio.removeEventListener('canplaythrough', handleCanPlayThrough);
+      audio.removeEventListener('error', handleError);
       audio.pause();
     };
   }, []);
@@ -74,38 +86,66 @@ export const useAudioPlayer = (tracks: Track[]) => {
   useEffect(() => {
     if (audioRef.current && currentTrack) {
       console.log(`🔄 TRACK CHANGE: Loading "${currentTrack.title}" by ${currentTrack.artist}`);
-      console.log(`🔄 TRACK CHANGE: Source: ${currentTrack.src}`);
       
-      // Only pause if we're not intentionally replaying the same track
-      if (!isReplayingRef.current) {
-        console.log(`🔄 TRACK CHANGE: Pausing previous track`);
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        console.log(`🔄 TRACK CHANGE: Skipping pause (replay mode)`);
-      }
-      
+      audioRef.current.pause();
+      setIsPlaying(false);
       audioRef.current.src = currentTrack.src;
       audioRef.current.volume = volume;
       setCurrentTime(0);
-      isReplayingRef.current = false; // Reset the flag
-      console.log(`🔄 TRACK CHANGE: Audio source and volume updated for "${currentTrack.title}"`);
+      
+      console.log(`🔄 TRACK CHANGE: Audio source updated for "${currentTrack.title}"`);
     }
-  }, [currentTrack, volume]);
+  }, [currentTrackIndex, volume]); // Use currentTrackIndex for stability
 
   const play = useCallback(async () => {
     if (audioRef.current && currentTrack) {
       console.log(`▶️ PLAY: Starting playback of "${currentTrack.title}" by ${currentTrack.artist}`);
+      console.log(`▶️ PLAY: Audio readyState: ${audioRef.current.readyState}`);
+      console.log(`▶️ PLAY: Audio src: ${audioRef.current.src}`);
+      console.log(`▶️ PLAY: Audio paused: ${audioRef.current.paused}`);
+      
+      // If audio source is not set, set it now
+      if (!audioRef.current.src || audioRef.current.src !== currentTrack.src) {
+        console.log(`▶️ PLAY: Setting audio source: ${currentTrack.src}`);
+        audioRef.current.src = currentTrack.src;
+        audioRef.current.volume = volume;
+        setCurrentTime(0);
+      }
+      
       try {
+        // Check if audio is ready to play
+        if (audioRef.current.readyState < 2) {
+          console.log(`▶️ PLAY: Audio not ready, waiting for canplay event...`);
+          await new Promise((resolve) => {
+            const handleCanPlay = () => {
+              audioRef.current?.removeEventListener('canplay', handleCanPlay);
+              resolve(void 0);
+            };
+            audioRef.current?.addEventListener('canplay', handleCanPlay);
+          });
+        }
+        
         const playPromise = audioRef.current.play();
         if (playPromise !== undefined) {
           console.log(`▶️ PLAY: Play promise created, waiting for playback to start...`);
-          await playPromise;
+          
+          // Add timeout to prevent hanging
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Play timeout after 10 seconds')), 10000);
+          });
+          
+          await Promise.race([playPromise, timeoutPromise]);
           setIsPlaying(true);
           console.log(`▶️ PLAY: Successfully started playback of "${currentTrack.title}"`);
         }
       } catch (error) {
         console.error('❌ PLAY: Error playing audio:', error);
+        console.error('❌ PLAY: Error details:', {
+          name: error.name,
+          message: error.message,
+          readyState: audioRef.current?.readyState,
+          src: audioRef.current?.src
+        });
         setIsPlaying(false);
       }
     } else if (!currentTrack) {
@@ -113,7 +153,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
     } else {
       console.log(`⚠️ PLAY: Audio element not available`);
     }
-  }, [currentTrack]);
+  }, [currentTrack, volume]);
 
   const pause = useCallback(() => {
     if (audioRef.current && currentTrack) {
@@ -153,42 +193,47 @@ export const useAudioPlayer = (tracks: Track[]) => {
 
   // Handle track ended event with repeat logic
   const handleEnded = useCallback(async () => {
-    console.log(`🏁 TRACK ENDED: "${currentTrack?.title}" finished playing (repeat mode: ${repeatMode})`);
+    // Get current values at the time of the event
+    const currentRepeatMode = repeatMode;
+    const currentIndex = currentTrackIndex;
+    const currentTracksLength = tracks.length;
+    const track = tracks[currentIndex];
     
-    if (repeatMode === 'one') {
-      // Repeat current track
-      console.log(`🔁 REPEAT ONE: Replaying "${currentTrack?.title}"`);
-      if (audioRef.current) {
-        isReplayingRef.current = true; // Set flag to prevent pause in useEffect
-        audioRef.current.currentTime = 0;
+    console.log(`🏁 TRACK ENDED: "${track?.title}" finished playing (repeat mode: ${currentRepeatMode})`);
+    
+    if (currentRepeatMode === 'one') {
+      // Repeat current track - don't change track, just restart playback
+      console.log(`🔁 REPEAT ONE: Replaying "${track?.title}"`);
+      if (audioRef.current && track) {
         try {
+          audioRef.current.currentTime = 0;
           const playPromise = audioRef.current.play();
           if (playPromise !== undefined) {
             await playPromise;
             setIsPlaying(true);
-            console.log(`🔁 REPEAT ONE: Successfully replayed "${currentTrack?.title}"`);
+            console.log(`🔁 REPEAT ONE: Successfully replayed "${track.title}"`);
           }
         } catch (error) {
           console.error('❌ REPEAT ONE: Error replaying audio:', error);
           setIsPlaying(false);
         }
       }
-    } else if (repeatMode === 'all') {
+    } else if (currentRepeatMode === 'all') {
       // Go to next track (will loop back to first if at end)
-      const nextIndex = (currentTrackIndex + 1) % tracks.length;
+      const nextIndex = (currentIndex + 1) % currentTracksLength;
       const nextTrack = tracks[nextIndex];
       console.log(`🔄 REPEAT ALL: Moving to next track "${nextTrack?.title}" (${nextIndex})`);
       setCurrentTrackIndex(nextIndex);
       setIsPlaying(false);
     } else {
       // No repeat - go to next track
-      const nextIndex = (currentTrackIndex + 1) % tracks.length;
+      const nextIndex = (currentIndex + 1) % currentTracksLength;
       const nextTrack = tracks[nextIndex];
       console.log(`⏭️ NO REPEAT: Moving to next track "${nextTrack?.title}" (${nextIndex})`);
       setCurrentTrackIndex(nextIndex);
       setIsPlaying(false);
     }
-  }, [repeatMode, currentTrackIndex, tracks.length, currentTrack, tracks]);
+  }, [repeatMode, currentTrackIndex, tracks]);
 
   // Update ended event listener when handleEnded changes
   useEffect(() => {
@@ -196,6 +241,12 @@ export const useAudioPlayer = (tracks: Track[]) => {
       audioRef.current.removeEventListener('ended', handleEnded);
       audioRef.current.addEventListener('ended', handleEnded);
     }
+    
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.removeEventListener('ended', handleEnded);
+      }
+    };
   }, [handleEnded]);
 
   const previous = useCallback(() => {
@@ -212,11 +263,15 @@ export const useAudioPlayer = (tracks: Track[]) => {
 
   const seek = useCallback((time: number) => {
     if (audioRef.current && currentTrack) {
-      const formattedTime = `${Math.floor(time / 60)}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
-      console.log(`⏱️ SEEK: Seeking to ${formattedTime} in "${currentTrack.title}"`);
+      const now = Date.now();
+      // Only log every 500ms to reduce spam
+      if (now - lastSeekTimeRef.current > 500) {
+        const formattedTime = `${Math.floor(time / 60)}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
+        console.log(`⏱️ SEEK: Seeking to ${formattedTime} in "${currentTrack.title}"`);
+        lastSeekTimeRef.current = now;
+      }
       audioRef.current.currentTime = time;
       setCurrentTime(time);
-      console.log(`⏱️ SEEK: Successfully seeked to ${formattedTime}`);
     } else if (!currentTrack) {
       console.log(`⚠️ SEEK: No current track to seek in`);
     } else {
