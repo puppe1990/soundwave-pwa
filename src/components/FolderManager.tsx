@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { FolderPlus, Folder as FolderIcon, Edit2, Trash2, MoreVertical } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
@@ -118,6 +118,9 @@ export const FolderManager = ({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create New Folder</DialogTitle>
+              <DialogDescription>
+                Enter a name for your new folder to organize your tracks.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <Input
@@ -194,6 +197,9 @@ export const FolderManager = ({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rename Folder</DialogTitle>
+            <DialogDescription>
+              Enter a new name for this folder.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <Input

@@ -10,19 +10,21 @@ export const useAudioUpload = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  // Convert File to base64 string
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        // Remove data URL prefix (e.g., "data:audio/mp3;base64,")
-        const base64 = result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
+  // Request file handle for persistent access
+  const requestFileHandle = async (file: File): Promise<FileSystemFileHandle | null> => {
+    try {
+      // Check if File System Access API is supported
+      if ('showOpenFilePicker' in window) {
+        // For now, we'll just return null and use the file directly
+        // In a real implementation, you'd ask user to grant permission
+        console.log(`📁 File System Access API available for: ${file.name}`);
+        return null; // Will use file directly
+      }
+      return null;
+    } catch (error) {
+      console.warn('File System Access API not available:', error);
+      return null;
+    }
   };
 
   const extractAudioMetadata = (file: File): Promise<{
@@ -131,6 +133,7 @@ export const useAudioUpload = () => {
   };
 
   const uploadAudio = useCallback(async (files: FileList): Promise<StoredTrack[]> => {
+    console.log(`🔄 useAudioUpload: Starting upload of ${files.length} files`);
     setIsUploading(true);
     setUploadProgress(0);
     
@@ -145,23 +148,30 @@ export const useAudioUpload = () => {
     
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      console.log(`🔄 Processing file ${i + 1}/${totalFiles}: ${file.name} (${Math.round(file.size / 1024)}KB)`);
       
       // Check if it's an audio file
       if (!validAudioTypes.includes(file.type) && !file.name.match(/\.(mp3|wav|ogg|m4a|aac|flac|webm)$/i)) {
-        console.warn(`Skipping non-audio file: ${file.name}`);
+        console.warn(`⚠️ Skipping non-audio file: ${file.name} (type: ${file.type})`);
         continue;
       }
       
-      // Check file size (max 50MB)
-      if (file.size > 50 * 1024 * 1024) {
-        console.warn(`File too large: ${file.name} (${Math.round(file.size / 1024 / 1024)}MB)`);
-        continue;
-      }
+      // No file size limit - let browser storage handle capacity
       
       try {
+        console.log(`🔄 Extracting metadata for: ${file.name}`);
         const metadata = await extractAudioMetadata(file);
+        console.log(`📊 Metadata extracted: ${metadata.title} by ${metadata.artist} (${metadata.duration}s)`);
+        
+        console.log(`🔄 Generating cover art for: ${file.name}`);
         const cover = generateCoverArt(metadata.title, metadata.artist);
-        const fileData = await fileToBase64(file);
+        
+        console.log(`🔄 Requesting file handle for: ${file.name}`);
+        const fileHandle = await requestFileHandle(file);
+        
+        // Create URL for immediate use
+        const fileUrl = URL.createObjectURL(file);
+        console.log(`🔗 Created object URL for: ${file.name}`);
         
         const track: StoredTrack = {
           id: `uploaded-${Date.now()}-${i}`,
@@ -170,23 +180,27 @@ export const useAudioUpload = () => {
           album: metadata.album,
           duration: metadata.duration,
           cover: cover,
-          fileData: fileData,
+          fileHandle: fileHandle || undefined,
+          filePath: fileHandle ? undefined : fileUrl, // Use URL as fallback
           fileName: file.name,
           fileSize: file.size,
           fileType: file.type,
+          createdAt: Date.now(),
         };
         
         tracks.push(track);
         setUploadProgress(((i + 1) / totalFiles) * 100);
+        console.log(`✅ Successfully processed: ${file.name}`);
         
       } catch (error) {
-        console.error(`Error processing file ${file.name}:`, error);
+        console.error(`❌ Error processing file ${file.name}:`, error);
       }
     }
     
     setIsUploading(false);
     setUploadProgress(0);
     
+    console.log(`✅ useAudioUpload: Completed processing ${tracks.length}/${totalFiles} files successfully`);
     return tracks;
   }, []);
 

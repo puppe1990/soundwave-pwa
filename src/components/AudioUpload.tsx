@@ -15,7 +15,7 @@ export const AudioUpload = ({ onTracksUploaded }: AudioUploadProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFolder, setSelectedFolder] = useState<string | undefined>();
   const { uploadAudio, isUploading, uploadProgress } = useAudioUpload();
-  const { addTracks, convertToTrack, folders, createFolder } = useLocalStorage();
+  const { addTracks, convertToTrack, folders, createFolder, getStorageInfo } = useLocalStorage();
   const { toast } = useToast();
 
   const handleFileSelect = () => {
@@ -26,6 +26,8 @@ export const AudioUpload = ({ onTracksUploaded }: AudioUploadProps) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
+    console.log(`📤 AudioUpload: Starting upload of ${files.length} files to folder: ${selectedFolder || 'All Tracks'}`);
+
     try {
       toast({
         title: "Uploading audio files",
@@ -33,13 +35,16 @@ export const AudioUpload = ({ onTracksUploaded }: AudioUploadProps) => {
       });
 
       const storedTracks = await uploadAudio(files);
+      console.log(`📤 AudioUpload: Processed ${storedTracks.length} tracks from ${files.length} files`);
       
       if (storedTracks.length > 0) {
         // Add folder information to tracks
         const tracksWithFolder = storedTracks.map(track => ({
           ...track,
-          folder: selectedFolder
+          folder: selectedFolder || undefined // Explicitly set undefined if no folder selected
         }));
+        console.log(`📤 AudioUpload: Assigning folder "${selectedFolder || 'undefined'}" to tracks`);
+        console.log(`📤 AudioUpload: Adding tracks to folder: ${selectedFolder || 'All Tracks'}`);
         
         // Save to localStorage
         await addTracks(tracksWithFolder);
@@ -48,11 +53,13 @@ export const AudioUpload = ({ onTracksUploaded }: AudioUploadProps) => {
         const tracks = tracksWithFolder.map(convertToTrack);
         onTracksUploaded(tracks);
         
+        console.log(`📤 AudioUpload: Successfully uploaded ${storedTracks.length} tracks`);
         toast({
           title: "Upload successful",
           description: `Added ${storedTracks.length} track${storedTracks.length > 1 ? 's' : ''} to your playlist and saved locally`,
         });
       } else {
+        console.log('📤 AudioUpload: No valid audio files found');
         toast({
           title: "No valid audio files",
           description: "Please select valid audio files (MP3, WAV, OGG, M4A, AAC, FLAC)",
@@ -60,12 +67,29 @@ export const AudioUpload = ({ onTracksUploaded }: AudioUploadProps) => {
         });
       }
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('❌ AudioUpload: Upload error:', error);
+      
+      // Check if it's a storage quota error
+      const storageInfo = getStorageInfo();
+      const isQuotaError = error instanceof Error && error.message.includes('quota');
+      
       toast({
         title: "Upload failed",
-        description: "There was an error uploading your audio files",
+        description: isQuotaError 
+          ? error.message || "Storage quota exceeded. Please try uploading fewer files or clear some existing tracks."
+          : "There was an error uploading your audio files",
         variant: "destructive",
       });
+      
+      // Show storage info if quota error
+      if (isQuotaError && storageInfo) {
+        console.log(`📊 Storage usage: ${Math.round(storageInfo.usagePercentage)}% (${Math.round(storageInfo.totalSize / 1024)}KB)`);
+        toast({
+          title: "Storage Usage",
+          description: `Using ${Math.round(storageInfo.usagePercentage)}% of available storage (${Math.round(storageInfo.totalSize / 1024)}KB)`,
+          variant: "default",
+        });
+      }
     }
 
     // Reset file input
@@ -116,7 +140,7 @@ export const AudioUpload = ({ onTracksUploaded }: AudioUploadProps) => {
           Supported formats: MP3, WAV, OGG, M4A, AAC, FLAC
         </p>
         <p className="text-xs text-muted-foreground">
-          Max file size: 50MB per file
+          No file size limit - limited by browser storage
         </p>
       </div>
 

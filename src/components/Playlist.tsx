@@ -1,8 +1,19 @@
 import { Track } from '@/hooks/useAudioPlayer';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Play, Music, ChevronDown, ChevronRight, Folder } from 'lucide-react';
+import { Play, Music, ChevronDown, ChevronRight, Folder, Trash2 } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface PlaylistProps {
   tracks: Track[];
@@ -10,6 +21,7 @@ interface PlaylistProps {
   onSelectTrack: (index: number) => void;
   isPlaying: boolean;
   showFolders?: boolean;
+  onDeleteTrack?: (trackId: string) => void;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -18,7 +30,7 @@ const formatDuration = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-export const Playlist = ({ tracks, currentTrackIndex, onSelectTrack, isPlaying, showFolders = true }: PlaylistProps) => {
+export const Playlist = ({ tracks, currentTrackIndex, onSelectTrack, isPlaying, showFolders = true, onDeleteTrack }: PlaylistProps) => {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['All Tracks']));
 
   // Group tracks by folder
@@ -55,50 +67,85 @@ export const Playlist = ({ tracks, currentTrackIndex, onSelectTrack, isPlaying, 
     const isCurrentTrack = actualIndex === currentTrackIndex;
     
     return (
-      <Button
+      <div
         key={track.id}
-        variant="ghost"
-        onClick={() => onSelectTrack(actualIndex)}
-        className={`w-full p-4 h-auto justify-start rounded-lg transition-smooth hover:bg-secondary/50 ${
+        className={`group flex items-center gap-4 w-full p-4 rounded-lg transition-smooth hover:bg-secondary/50 ${
           isCurrentTrack 
             ? 'bg-primary/10 border border-primary/20 hover:bg-primary/15' 
             : ''
         }`}
       >
-        <div className="flex items-center gap-4 w-full">
-          <div className="relative flex-shrink-0">
-            <img
-              src={track.cover}
-              alt={`${track.album} cover`}
-              className="w-12 h-12 rounded-lg object-cover"
-            />
-            {isCurrentTrack && isPlaying && (
-              <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center">
-                <Play className="h-4 w-4 text-white" fill="currentColor" />
-              </div>
-            )}
-          </div>
+        <Button
+          variant="ghost"
+          onClick={() => onSelectTrack(actualIndex)}
+          className="flex-1 justify-start p-0 h-auto"
+        >
+          <div className="flex items-center gap-4 w-full">
+            <div className="relative flex-shrink-0">
+              <img
+                src={track.cover}
+                alt={`${track.album} cover`}
+                className="w-12 h-12 rounded-lg object-cover"
+              />
+              {isCurrentTrack && isPlaying && (
+                <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center">
+                  <Play className="h-4 w-4 text-white" fill="currentColor" />
+                </div>
+              )}
+            </div>
 
-          <div className="flex-1 text-left min-w-0">
-            <h4 className={`font-medium truncate ${
-              isCurrentTrack ? 'text-primary' : 'text-foreground'
-            }`}>
-              {track.title}
-            </h4>
-            <p className={`text-sm truncate ${
+            <div className="flex-1 text-left min-w-0">
+              <h4 className={`font-medium truncate ${
+                isCurrentTrack ? 'text-primary' : 'text-foreground'
+              }`}>
+                {track.title}
+              </h4>
+              <p className={`text-sm truncate ${
+                isCurrentTrack ? 'text-primary/70' : 'text-muted-foreground'
+              }`}>
+                {track.artist}
+              </p>
+            </div>
+
+            <div className={`text-sm ${
               isCurrentTrack ? 'text-primary/70' : 'text-muted-foreground'
             }`}>
-              {track.artist}
-            </p>
+              {formatDuration(track.duration)}
+            </div>
           </div>
+        </Button>
 
-          <div className={`text-sm ${
-            isCurrentTrack ? 'text-primary/70' : 'text-muted-foreground'
-          }`}>
-            {formatDuration(track.duration)}
-          </div>
-        </div>
-      </Button>
+        {onDeleteTrack && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="opacity-0 group-hover:opacity-100 h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Track</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete "{track.title}" by {track.artist}? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDeleteTrack(track.id)}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
     );
   };
 

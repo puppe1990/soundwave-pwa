@@ -21,6 +21,7 @@ export const AudioPlayer = () => {
     getTracks, 
     getTracksByFolder,
     clearAllTracks, 
+    removeTrack,
     storedTracks,
     folders,
     createFolder,
@@ -30,32 +31,20 @@ export const AudioPlayer = () => {
   } = useLocalStorage();
   const { toast } = useToast();
 
-  // Load stored tracks on component mount
+  // Load tracks based on folder selection
   useEffect(() => {
-    const loadStoredTracks = () => {
+    const loadTracks = async () => {
       try {
-        const allTracks = getTracks();
-        setTracks(allTracks);
+        console.log(`🎵 AudioPlayer: Loading tracks for folder: ${selectedFolder || 'All Tracks'}`);
+        const tracksToLoad = await getTracksByFolder(selectedFolder);
+        setTracks(tracksToLoad);
+        console.log(`🎵 AudioPlayer: Loaded ${tracksToLoad.length} tracks`);
       } catch (error) {
-        console.error('Error loading stored tracks:', error);
+        console.error('❌ AudioPlayer: Error loading tracks:', error);
       }
     };
 
-    loadStoredTracks();
-  }, [getTracks]);
-
-  // Update tracks when folder selection changes
-  useEffect(() => {
-    const loadFolderTracks = () => {
-      try {
-        const folderTracks = getTracksByFolder(selectedFolder);
-        setTracks(folderTracks);
-      } catch (error) {
-        console.error('Error loading folder tracks:', error);
-      }
-    };
-
-    loadFolderTracks();
+    loadTracks();
   }, [selectedFolder, getTracksByFolder]);
 
   // Handle clearing all stored tracks
@@ -73,6 +62,27 @@ export const AudioPlayer = () => {
       toast({
         title: "Error",
         description: "Failed to clear stored tracks",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle deleting a single track
+  const handleDeleteTrack = async (trackId: string) => {
+    try {
+      await removeTrack(trackId);
+      // Reload tracks to update the list
+      const updatedTracks = await getTracksByFolder(selectedFolder);
+      setTracks(updatedTracks);
+      toast({
+        title: "Track deleted",
+        description: "The track has been removed from your playlist.",
+      });
+    } catch (error) {
+      console.error('Error deleting track:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete track. Please try again.",
         variant: "destructive",
       });
     }
@@ -96,17 +106,20 @@ export const AudioPlayer = () => {
     toggleRepeat,
   } = useAudioPlayer(tracks);
 
-  const handleTracksUploaded = (newTracks: Track[]) => {
-    // Reload tracks to include the new ones
-    const allTracks = getTracks();
-    setTracks(allTracks);
+  const handleTracksUploaded = async (newTracks: Track[]) => {
+    console.log(`🎵 AudioPlayer: ${newTracks.length} tracks uploaded, reloading for folder: ${selectedFolder || 'All Tracks'}`);
+    // Reload tracks based on current folder selection
+    const tracksToLoad = await getTracksByFolder(selectedFolder);
+    setTracks(tracksToLoad);
     setShowUpload(false);
     if (!showPlaylist) {
       setShowPlaylist(true);
     }
+    console.log(`🎵 AudioPlayer: Reloaded ${tracksToLoad.length} tracks after upload`);
   };
 
   const handleFolderSelect = (folderName?: string) => {
+    console.log(`🎵 AudioPlayer: Folder selected: ${folderName || 'All Tracks'}`);
     setSelectedFolder(folderName);
     if (folderName) {
       setShowPlaylist(true);
@@ -244,6 +257,7 @@ export const AudioPlayer = () => {
               onSelectTrack={selectTrack}
               isPlaying={isPlaying}
               showFolders={selectedFolder === undefined}
+              onDeleteTrack={handleDeleteTrack}
             />
           )}
         </div>

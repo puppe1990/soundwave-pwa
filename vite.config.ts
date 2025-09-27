@@ -9,6 +9,9 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    headers: {
+      'Service-Worker-Allowed': '/',
+    },
   },
   plugins: [
     react(), 
@@ -90,7 +93,8 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']
       },
       devOptions: {
-        enabled: true
+        enabled: true,
+        type: 'module'
       }
     })
   ].filter(Boolean),
