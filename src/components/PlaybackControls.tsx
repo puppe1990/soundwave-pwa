@@ -1,4 +1,4 @@
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Repeat, Repeat1 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 
@@ -12,6 +12,8 @@ interface PlaybackControlsProps {
   currentTime: number;
   duration: number;
   onSeek: (time: number) => void;
+  repeatMode: 'none' | 'one' | 'all';
+  onToggleRepeat: () => void;
 }
 
 const formatTime = (seconds: number): string => {
@@ -30,6 +32,8 @@ export const PlaybackControls = ({
   currentTime,
   duration,
   onSeek,
+  repeatMode,
+  onToggleRepeat,
 }: PlaybackControlsProps) => {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
@@ -92,6 +96,27 @@ export const PlaybackControls = ({
           className="h-12 w-12 rounded-full hover:bg-secondary/50 text-foreground hover:text-primary transition-smooth"
         >
           <SkipForward className="h-6 w-6" />
+        </Button>
+      </div>
+
+      {/* Secondary Controls */}
+      <div className="flex items-center justify-center gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggleRepeat}
+          className={`h-10 w-10 rounded-full hover:bg-secondary/50 transition-smooth ${
+            repeatMode === 'none' 
+              ? 'text-muted-foreground hover:text-foreground' 
+              : 'text-primary'
+          }`}
+          title={`Repeat: ${repeatMode === 'none' ? 'Off' : repeatMode === 'one' ? 'One' : 'All'}`}
+        >
+          {repeatMode === 'one' ? (
+            <Repeat1 className="h-5 w-5" />
+          ) : (
+            <Repeat className="h-5 w-5" />
+          )}
         </Button>
       </div>
 

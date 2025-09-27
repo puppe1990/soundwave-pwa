@@ -17,6 +17,7 @@ export interface AudioPlayerState {
   duration: number;
   volume: number;
   isLoading: boolean;
+  repeatMode: 'none' | 'one' | 'all';
 }
 
 export const useAudioPlayer = (tracks: Track[]) => {
@@ -27,6 +28,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<'none' | 'one' | 'all'>('none');
 
   const currentTrack = tracks[currentTrackIndex] || null;
 
@@ -48,10 +50,6 @@ export const useAudioPlayer = (tracks: Track[]) => {
       setIsLoading(true);
     };
 
-    const handleEnded = () => {
-      next();
-    };
-
     const handleCanPlayThrough = () => {
       setIsLoading(false);
     };
@@ -59,14 +57,12 @@ export const useAudioPlayer = (tracks: Track[]) => {
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('loadstart', handleLoadStart);
-    audio.addEventListener('ended', handleEnded);
     audio.addEventListener('canplaythrough', handleCanPlayThrough);
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('loadstart', handleLoadStart);
-      audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('canplaythrough', handleCanPlayThrough);
       audio.pause();
     };
@@ -113,6 +109,31 @@ export const useAudioPlayer = (tracks: Track[]) => {
     setIsPlaying(false);
   }, [currentTrackIndex, tracks.length]);
 
+  // Handle track ended event with repeat logic
+  const handleEnded = useCallback(() => {
+    if (repeatMode === 'one') {
+      // Repeat current track
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
+    } else {
+      // Go to next track (will loop back to first if at end)
+      const nextIndex = (currentTrackIndex + 1) % tracks.length;
+      setCurrentTrackIndex(nextIndex);
+      setIsPlaying(false);
+    }
+  }, [repeatMode, currentTrackIndex, tracks.length]);
+
+  // Update ended event listener when handleEnded changes
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.removeEventListener('ended', handleEnded);
+      audioRef.current.addEventListener('ended', handleEnded);
+    }
+  }, [handleEnded]);
+
   const previous = useCallback(() => {
     const prevIndex = currentTrackIndex === 0 ? tracks.length - 1 : currentTrackIndex - 1;
     setCurrentTrackIndex(prevIndex);
@@ -141,6 +162,21 @@ export const useAudioPlayer = (tracks: Track[]) => {
     }
   }, [tracks.length]);
 
+  const toggleRepeat = useCallback(() => {
+    setRepeatMode(prev => {
+      switch (prev) {
+        case 'none':
+          return 'all';
+        case 'all':
+          return 'one';
+        case 'one':
+          return 'none';
+        default:
+          return 'none';
+      }
+    });
+  }, []);
+
   return {
     currentTrack,
     currentTrackIndex,
@@ -149,6 +185,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
     duration,
     volume,
     isLoading,
+    repeatMode,
     play,
     pause,
     togglePlay,
@@ -157,5 +194,6 @@ export const useAudioPlayer = (tracks: Track[]) => {
     seek,
     setVolume: setVolumeLevel,
     selectTrack,
+    toggleRepeat,
   };
 };

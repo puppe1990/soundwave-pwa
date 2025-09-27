@@ -61,12 +61,14 @@ export const AudioPlayer = () => {
     duration,
     volume,
     isLoading,
+    repeatMode,
     togglePlay,
     next,
     previous,
     seek,
     setVolume,
     selectTrack,
+    toggleRepeat,
   } = useAudioPlayer(tracks);
 
   const handleTracksUploaded = (newTracks: Track[]) => {
@@ -157,6 +159,8 @@ export const AudioPlayer = () => {
               currentTime={currentTime}
               duration={duration}
               onSeek={seek}
+              repeatMode={repeatMode}
+              onToggleRepeat={toggleRepeat}
             />
           </div>
 
