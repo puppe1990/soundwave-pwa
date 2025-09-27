@@ -2,32 +2,58 @@ import { useState, useEffect, useCallback } from 'react';
 import { Track } from './useAudioPlayer';
 
 const STORAGE_KEY = 'soundwave-uploaded-tracks';
+const FOLDERS_STORAGE_KEY = 'soundwave-folders';
 
 export interface StoredTrack extends Omit<Track, 'src'> {
   fileData: string; // Base64 encoded file data
   fileName: string;
   fileSize: number;
   fileType: string;
+  folder?: string; // Folder name for organization
+}
+
+export interface Folder {
+  id: string;
+  name: string;
+  createdAt: number;
 }
 
 export const useLocalStorage = () => {
   const [storedTracks, setStoredTracks] = useState<StoredTrack[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
 
-  // Load tracks from localStorage on initialization
+  // Load tracks and folders from localStorage on initialization
   useEffect(() => {
-    const loadStoredTracks = async () => {
+    const loadStoredData = async () => {
       try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          const tracks: StoredTrack[] = JSON.parse(stored);
+        // Load tracks
+        const storedTracks = localStorage.getItem(STORAGE_KEY);
+        if (storedTracks) {
+          const tracks: StoredTrack[] = JSON.parse(storedTracks);
           setStoredTracks(tracks);
         }
+
+        // Load folders
+        const storedFolders = localStorage.getItem(FOLDERS_STORAGE_KEY);
+        if (storedFolders) {
+          const foldersData: Folder[] = JSON.parse(storedFolders);
+          setFolders(foldersData);
+        } else {
+          // Create default folder if none exist
+          const defaultFolder: Folder = {
+            id: 'default',
+            name: 'All Tracks',
+            createdAt: Date.now()
+          };
+          setFolders([defaultFolder]);
+          localStorage.setItem(FOLDERS_STORAGE_KEY, JSON.stringify([defaultFolder]));
+        }
       } catch (error) {
-        console.error('Error loading stored tracks:', error);
+        console.error('Error loading stored data:', error);
       }
     };
 
-    loadStoredTracks();
+    loadStoredData();
   }, []);
 
   // Save tracks to localStorage
@@ -79,6 +105,7 @@ export const useLocalStorage = () => {
       duration: storedTrack.duration,
       src: audioUrl,
       cover: storedTrack.cover,
+      folder: storedTrack.folder,
     };
   }, []);
 
@@ -87,13 +114,78 @@ export const useLocalStorage = () => {
     return storedTracks.map(convertToTrack);
   }, [storedTracks, convertToTrack]);
 
+  // Get tracks filtered by folder
+  const getTracksByFolder = useCallback((folderName?: string): Track[] => {
+    if (!folderName) return getTracks();
+    return storedTracks
+      .filter(track => track.folder === folderName)
+      .map(convertToTrack);
+  }, [storedTracks, convertToTrack, getTracks]);
+
+  // Folder management functions
+  const saveFolders = useCallback(async (foldersData: Folder[]) => {
+    try {
+      localStorage.setItem(FOLDERS_STORAGE_KEY, JSON.stringify(foldersData));
+      setFolders(foldersData);
+    } catch (error) {
+      console.error('Error saving folders to localStorage:', error);
+      throw error;
+    }
+  }, []);
+
+  const createFolder = useCallback(async (name: string) => {
+    const newFolder: Folder = {
+      id: `folder-${Date.now()}`,
+      name,
+      createdAt: Date.now()
+    };
+    const updatedFolders = [...folders, newFolder];
+    await saveFolders(updatedFolders);
+    return newFolder;
+  }, [folders, saveFolders]);
+
+  const renameFolder = useCallback(async (folderId: string, newName: string) => {
+    const updatedFolders = folders.map(folder => 
+      folder.id === folderId ? { ...folder, name: newName } : folder
+    );
+    await saveFolders(updatedFolders);
+  }, [folders, saveFolders]);
+
+  const deleteFolder = useCallback(async (folderId: string) => {
+    // Move all tracks from this folder to default folder
+    const updatedTracks = storedTracks.map(track => 
+      track.folder === folders.find(f => f.id === folderId)?.name 
+        ? { ...track, folder: undefined }
+        : track
+    );
+    
+    // Remove the folder
+    const updatedFolders = folders.filter(folder => folder.id !== folderId);
+    
+    await saveTracks(updatedTracks);
+    await saveFolders(updatedFolders);
+  }, [folders, storedTracks, saveFolders, saveTracks]);
+
+  const moveTrackToFolder = useCallback(async (trackId: string, folderName?: string) => {
+    const updatedTracks = storedTracks.map(track => 
+      track.id === trackId ? { ...track, folder: folderName } : track
+    );
+    await saveTracks(updatedTracks);
+  }, [storedTracks, saveTracks]);
+
   return {
     storedTracks,
+    folders,
     saveTracks,
     addTracks,
     removeTrack,
     clearAllTracks,
     getTracks,
+    getTracksByFolder,
     convertToTrack,
+    createFolder,
+    renameFolder,
+    deleteFolder,
+    moveTrackToFolder,
   };
 };

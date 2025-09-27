@@ -3,9 +3,10 @@ import { TrackInfo } from '@/components/TrackInfo';
 import { PlaybackControls } from '@/components/PlaybackControls';
 import { Playlist } from '@/components/Playlist';
 import { AudioUpload } from '@/components/AudioUpload';
+import { FolderManager } from '@/components/FolderManager';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { List, Upload, Trash2 } from 'lucide-react';
+import { List, Upload, Trash2, FolderOpen } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
 
@@ -13,18 +14,28 @@ import { useToast } from '@/hooks/use-toast';
 export const AudioPlayer = () => {
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  const [showFolders, setShowFolders] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState<string | undefined>();
   const [tracks, setTracks] = useState<Track[]>([]);
-  const { getTracks, clearAllTracks, storedTracks } = useLocalStorage();
+  const { 
+    getTracks, 
+    getTracksByFolder,
+    clearAllTracks, 
+    storedTracks,
+    folders,
+    createFolder,
+    renameFolder,
+    deleteFolder,
+    moveTrackToFolder
+  } = useLocalStorage();
   const { toast } = useToast();
 
   // Load stored tracks on component mount
   useEffect(() => {
     const loadStoredTracks = () => {
       try {
-        const storedTracks = getTracks();
-        if (storedTracks.length > 0) {
-          setTracks(prev => [...prev, ...storedTracks]);
-        }
+        const allTracks = getTracks();
+        setTracks(allTracks);
       } catch (error) {
         console.error('Error loading stored tracks:', error);
       }
@@ -32,6 +43,20 @@ export const AudioPlayer = () => {
 
     loadStoredTracks();
   }, [getTracks]);
+
+  // Update tracks when folder selection changes
+  useEffect(() => {
+    const loadFolderTracks = () => {
+      try {
+        const folderTracks = getTracksByFolder(selectedFolder);
+        setTracks(folderTracks);
+      } catch (error) {
+        console.error('Error loading folder tracks:', error);
+      }
+    };
+
+    loadFolderTracks();
+  }, [selectedFolder, getTracksByFolder]);
 
   // Handle clearing all stored tracks
   const handleClearStoredTracks = async () => {
@@ -72,9 +97,18 @@ export const AudioPlayer = () => {
   } = useAudioPlayer(tracks);
 
   const handleTracksUploaded = (newTracks: Track[]) => {
-    setTracks(prev => [...prev, ...newTracks]);
+    // Reload tracks to include the new ones
+    const allTracks = getTracks();
+    setTracks(allTracks);
     setShowUpload(false);
     if (!showPlaylist) {
+      setShowPlaylist(true);
+    }
+  };
+
+  const handleFolderSelect = (folderName?: string) => {
+    setSelectedFolder(folderName);
+    if (folderName) {
       setShowPlaylist(true);
     }
   };
@@ -94,6 +128,14 @@ export const AudioPlayer = () => {
                 className="rounded-full hover:bg-secondary/50 text-foreground hover:text-primary transition-smooth"
               >
                 <Upload className="h-6 w-6" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowFolders(!showFolders)}
+                className="rounded-full hover:bg-secondary/50 text-foreground hover:text-primary transition-smooth"
+              >
+                <FolderOpen className="h-6 w-6" />
               </Button>
               <Button
                 variant="ghost"
@@ -182,6 +224,18 @@ export const AudioPlayer = () => {
             </div>
           )}
 
+          {/* Folder Manager */}
+          {showFolders && (
+            <FolderManager
+              folders={folders}
+              selectedFolder={selectedFolder}
+              onFolderSelect={handleFolderSelect}
+              onCreateFolder={createFolder}
+              onRenameFolder={renameFolder}
+              onDeleteFolder={deleteFolder}
+            />
+          )}
+
           {/* Playlist */}
           {showPlaylist && (
             <Playlist
@@ -189,6 +243,7 @@ export const AudioPlayer = () => {
               currentTrackIndex={currentTrackIndex}
               onSelectTrack={selectTrack}
               isPlaying={isPlaying}
+              showFolders={selectedFolder === undefined}
             />
           )}
         </div>

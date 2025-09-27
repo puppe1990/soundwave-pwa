@@ -8,6 +8,7 @@ export interface Track {
   duration: number;
   src: string;
   cover: string;
+  folder?: string; // Optional folder name for organization
 }
 
 export interface AudioPlayerState {

@@ -1,10 +1,11 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload, Music, FileAudio } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAudioUpload } from '@/hooks/useAudioUpload';
 import { Track } from '@/hooks/useAudioPlayer';
 import { useLocalStorage, StoredTrack } from '@/hooks/useLocalStorage';
+import { FolderSelector } from '@/components/FolderSelector';
 
 interface AudioUploadProps {
   onTracksUploaded: (tracks: Track[]) => void;
@@ -12,8 +13,9 @@ interface AudioUploadProps {
 
 export const AudioUpload = ({ onTracksUploaded }: AudioUploadProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFolder, setSelectedFolder] = useState<string | undefined>();
   const { uploadAudio, isUploading, uploadProgress } = useAudioUpload();
-  const { addTracks, convertToTrack } = useLocalStorage();
+  const { addTracks, convertToTrack, folders, createFolder } = useLocalStorage();
   const { toast } = useToast();
 
   const handleFileSelect = () => {
@@ -33,11 +35,17 @@ export const AudioUpload = ({ onTracksUploaded }: AudioUploadProps) => {
       const storedTracks = await uploadAudio(files);
       
       if (storedTracks.length > 0) {
+        // Add folder information to tracks
+        const tracksWithFolder = storedTracks.map(track => ({
+          ...track,
+          folder: selectedFolder
+        }));
+        
         // Save to localStorage
-        await addTracks(storedTracks);
+        await addTracks(tracksWithFolder);
         
         // Convert to Track objects for the player
-        const tracks = storedTracks.map(convertToTrack);
+        const tracks = tracksWithFolder.map(convertToTrack);
         onTracksUploaded(tracks);
         
         toast({
@@ -75,6 +83,13 @@ export const AudioUpload = ({ onTracksUploaded }: AudioUploadProps) => {
         multiple
         onChange={handleFileChange}
         className="hidden"
+      />
+
+      <FolderSelector
+        folders={folders}
+        selectedFolder={selectedFolder}
+        onFolderChange={setSelectedFolder}
+        onCreateFolder={createFolder}
       />
 
       <Button
