@@ -26,6 +26,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastSeekTimeRef = useRef(0);
   const wasPlayingRef = useRef(false); // Track if audio was playing before track change
+  const hasUserInteractedRef = useRef(false); // Track if user has interacted with audio
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -41,6 +42,10 @@ export const useAudioPlayer = (tracks: Track[]) => {
   useEffect(() => {
     audioRef.current = new Audio();
     const audio = audioRef.current;
+    
+    // iOS Safari specific: prevent auto-resume
+    audio.preload = 'none';
+    audio.controls = false;
     
     console.log(`🎵 AUDIO INIT: Creating new audio element`);
 
@@ -115,6 +120,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
       console.log(`▶️ PLAY: Audio readyState: ${audioRef.current.readyState}`);
       console.log(`▶️ PLAY: Audio src: ${audioRef.current.src}`);
       console.log(`▶️ PLAY: Audio paused: ${audioRef.current.paused}`);
+      console.log(`▶️ PLAY: Has user interacted: ${hasUserInteractedRef.current}`);
       
       // If audio source is not set, set it now
       if (!audioRef.current.src || audioRef.current.src !== currentTrack.src) {
@@ -148,6 +154,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
           
           await Promise.race([playPromise, timeoutPromise]);
           setIsPlaying(true);
+          hasUserInteractedRef.current = true; // Mark that user has successfully played audio
           console.log(`▶️ PLAY: Successfully started playback of "${currentTrack.title}"`);
         }
       } catch (error) {
@@ -158,6 +165,17 @@ export const useAudioPlayer = (tracks: Track[]) => {
           readyState: audioRef.current?.readyState,
           src: audioRef.current?.src
         });
+        
+        // Check if this is a mobile autoplay policy error
+        if (error.name === 'NotAllowedError' || error.message.includes('autoplay')) {
+          console.log(`📱 MOBILE: Autoplay blocked, showing user guidance`);
+          toast({
+            title: "Tap to Play",
+            description: "Please tap the play button to start audio playback on mobile devices.",
+            duration: 3000,
+          });
+        }
+        
         setIsPlaying(false);
       }
     } else if (!currentTrack) {
@@ -165,13 +183,14 @@ export const useAudioPlayer = (tracks: Track[]) => {
     } else {
       console.log(`⚠️ PLAY: Audio element not available`);
     }
-  }, [currentTrack, volume]);
+  }, [currentTrack, volume, toast]);
 
   const pause = useCallback(() => {
     if (audioRef.current && currentTrack) {
       console.log(`⏸️ PAUSE: Pausing playback of "${currentTrack.title}"`);
       audioRef.current.pause();
       setIsPlaying(false);
+      wasPlayingRef.current = false; // Clear the wasPlaying flag when manually pausing
       console.log(`⏸️ PAUSE: Successfully paused "${currentTrack.title}"`);
     } else if (!currentTrack) {
       console.log(`⚠️ PAUSE: No current track to pause`);
@@ -180,16 +199,51 @@ export const useAudioPlayer = (tracks: Track[]) => {
     }
   }, [currentTrack]);
 
-  const togglePlay = useCallback(() => {
+  const togglePlay = useCallback(async () => {
     if (currentTrack) {
       console.log(`🔄 TOGGLE: ${isPlaying ? 'Pausing' : 'Playing'} "${currentTrack.title}"`);
     }
+    
+    // Mark that user has interacted with audio controls
+    hasUserInteractedRef.current = true;
+    
     if (isPlaying) {
-      pause();
+      // Pause the audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+        wasPlayingRef.current = false; // Clear the wasPlaying flag when manually pausing
+        console.log(`⏸️ TOGGLE: Paused "${currentTrack?.title}"`);
+      }
     } else {
-      play();
+      // For mobile devices, ensure we call play() directly in the user gesture context
+      if (audioRef.current && currentTrack) {
+        try {
+          // Set audio source if not already set
+          if (!audioRef.current.src || audioRef.current.src !== currentTrack.src) {
+            audioRef.current.src = currentTrack.src;
+            audioRef.current.volume = volume;
+            setCurrentTime(0);
+          }
+          
+          // Try to play immediately in the user gesture context
+          const playPromise = audioRef.current.play();
+          if (playPromise !== undefined) {
+            await playPromise;
+            setIsPlaying(true);
+            console.log(`📱 MOBILE: Successfully started playback via direct play() call`);
+            return;
+          }
+        } catch (error) {
+          console.log(`📱 MOBILE: Direct play() failed, falling back to regular play function:`, error);
+          // Fall back to the regular play function
+          await play();
+        }
+      } else {
+        await play();
+      }
     }
-  }, [isPlaying, play, pause, currentTrack]);
+  }, [isPlaying, currentTrack, volume, play]);
 
   const next = useCallback(() => {
     const nextIndex = (currentTrackIndex + 1) % tracks.length;
@@ -198,6 +252,9 @@ export const useAudioPlayer = (tracks: Track[]) => {
     const nextTrackTitle = nextTrack?.title || 'Unknown';
     
     console.log(`⏭️ NEXT: Moving from "${currentTrackTitle}" (${currentTrackIndex}) to "${nextTrackTitle}" (${nextIndex})`);
+    
+    // Mark that user has interacted with audio controls
+    hasUserInteractedRef.current = true;
     
     // Store current play state before changing track
     wasPlayingRef.current = isPlaying;
@@ -218,39 +275,45 @@ export const useAudioPlayer = (tracks: Track[]) => {
     
     console.log(`🏁 TRACK ENDED: "${track?.title}" finished playing (repeat mode: ${currentRepeatMode})`);
     
-    if (currentRepeatMode === 'one') {
-      // Repeat current track - don't change track, just restart playback
-      console.log(`🔁 REPEAT ONE: Replaying "${track?.title}"`);
-      if (audioRef.current && track) {
-        try {
-          audioRef.current.currentTime = 0;
-          const playPromise = audioRef.current.play();
-          if (playPromise !== undefined) {
-            await playPromise;
-            setIsPlaying(true);
-            console.log(`🔁 REPEAT ONE: Successfully replayed "${track.title}"`);
+    // Only auto-play if the user hasn't manually paused AND is currently playing
+    if (wasPlayingRef.current && isPlaying) {
+      if (currentRepeatMode === 'one') {
+        // Repeat current track - don't change track, just restart playback
+        console.log(`🔁 REPEAT ONE: Replaying "${track?.title}"`);
+        if (audioRef.current && track) {
+          try {
+            audioRef.current.currentTime = 0;
+            const playPromise = audioRef.current.play();
+            if (playPromise !== undefined) {
+              await playPromise;
+              setIsPlaying(true);
+              console.log(`🔁 REPEAT ONE: Successfully replayed "${track.title}"`);
+            }
+          } catch (error) {
+            console.error('❌ REPEAT ONE: Error replaying audio:', error);
+            setIsPlaying(false);
           }
-        } catch (error) {
-          console.error('❌ REPEAT ONE: Error replaying audio:', error);
-          setIsPlaying(false);
         }
+      } else if (currentRepeatMode === 'all') {
+        // Go to next track (will loop back to first if at end)
+        const nextIndex = (currentIndex + 1) % currentTracksLength;
+        const nextTrack = tracks[nextIndex];
+        console.log(`🔄 REPEAT ALL: Moving to next track "${nextTrack?.title}" (${nextIndex})`);
+        setCurrentTrackIndex(nextIndex);
+        setIsPlaying(false);
+      } else {
+        // No repeat - go to next track
+        const nextIndex = (currentIndex + 1) % currentTracksLength;
+        const nextTrack = tracks[nextIndex];
+        console.log(`⏭️ NO REPEAT: Moving to next track "${nextTrack?.title}" (${nextIndex})`);
+        setCurrentTrackIndex(nextIndex);
+        setIsPlaying(false);
       }
-    } else if (currentRepeatMode === 'all') {
-      // Go to next track (will loop back to first if at end)
-      const nextIndex = (currentIndex + 1) % currentTracksLength;
-      const nextTrack = tracks[nextIndex];
-      console.log(`🔄 REPEAT ALL: Moving to next track "${nextTrack?.title}" (${nextIndex})`);
-      setCurrentTrackIndex(nextIndex);
-      setIsPlaying(false);
     } else {
-      // No repeat - go to next track
-      const nextIndex = (currentIndex + 1) % currentTracksLength;
-      const nextTrack = tracks[nextIndex];
-      console.log(`⏭️ NO REPEAT: Moving to next track "${nextTrack?.title}" (${nextIndex})`);
-      setCurrentTrackIndex(nextIndex);
+      console.log(`🏁 TRACK ENDED: User manually paused or not playing, not auto-playing`);
       setIsPlaying(false);
     }
-  }, [repeatMode, currentTrackIndex, tracks]);
+  }, [repeatMode, currentTrackIndex, tracks, isPlaying]);
 
   // Update ended event listener when handleEnded changes
   useEffect(() => {
@@ -274,6 +337,9 @@ export const useAudioPlayer = (tracks: Track[]) => {
     
     console.log(`⏮️ PREVIOUS: Moving from "${currentTrackTitle}" (${currentTrackIndex}) to "${prevTrackTitle}" (${prevIndex})`);
     
+    // Mark that user has interacted with audio controls
+    hasUserInteractedRef.current = true;
+    
     // Store current play state before changing track
     wasPlayingRef.current = isPlaying;
     console.log(`⏮️ PREVIOUS: Storing play state: ${wasPlayingRef.current ? 'playing' : 'paused'}`);
@@ -292,6 +358,10 @@ export const useAudioPlayer = (tracks: Track[]) => {
         console.log(`⏱️ SEEK: Seeking to ${formattedTime} in "${currentTrack.title}"`);
         lastSeekTimeRef.current = now;
       }
+      
+      // Mark that user has interacted with audio controls
+      hasUserInteractedRef.current = true;
+      
       audioRef.current.currentTime = time;
       setCurrentTime(time);
     } else if (!currentTrack) {
@@ -305,6 +375,10 @@ export const useAudioPlayer = (tracks: Track[]) => {
     const clampedVolume = Math.max(0, Math.min(1, vol));
     const volumePercent = Math.round(clampedVolume * 100);
     console.log(`🔊 VOLUME: Setting volume to ${volumePercent}% (${clampedVolume.toFixed(2)})`);
+    
+    // Mark that user has interacted with audio controls
+    hasUserInteractedRef.current = true;
+    
     setVolume(clampedVolume);
     if (audioRef.current) {
       audioRef.current.volume = clampedVolume;
@@ -320,6 +394,9 @@ export const useAudioPlayer = (tracks: Track[]) => {
       
       console.log(`🎵 SELECT: Changing from "${currentTrackTitle}" (${currentTrackIndex}) to "${selectedTrackTitle}" (${trackIndex})`);
       
+      // Mark that user has interacted with audio controls
+      hasUserInteractedRef.current = true;
+      
       // Store current play state before changing track
       wasPlayingRef.current = isPlaying;
       console.log(`🎵 SELECT: Storing play state: ${wasPlayingRef.current ? 'playing' : 'paused'}`);
@@ -333,6 +410,9 @@ export const useAudioPlayer = (tracks: Track[]) => {
   }, [tracks.length, currentTrack, tracks, currentTrackIndex, isPlaying]);
 
   const toggleRepeat = useCallback(() => {
+    // Mark that user has interacted with audio controls
+    hasUserInteractedRef.current = true;
+    
     setRepeatMode(prev => {
       let newMode: 'none' | 'one' | 'all';
       let toastTitle: string;

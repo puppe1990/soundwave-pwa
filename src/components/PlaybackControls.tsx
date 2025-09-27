@@ -80,7 +80,7 @@ export const PlaybackControls = ({
           variant="default"
           size="icon"
           onClick={onTogglePlay}
-          className="h-16 w-16 rounded-full bg-gradient-primary hover:shadow-glow transition-smooth hover:scale-105"
+          className="h-16 w-16 rounded-full bg-gradient-primary hover:shadow-glow transition-smooth hover:scale-105 active:scale-95"
         >
           {isPlaying ? (
             <Pause className="h-8 w-8" />
