@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Track } from './useAudioPlayer';
 import { StoredTrack } from './useLocalStorage';
+import { indexedDBService } from '@/lib/indexedDB';
 
 export interface AudioFile extends File {
   duration?: number;
@@ -169,6 +170,11 @@ export const useAudioUpload = () => {
         console.log(`🔄 Requesting file handle for: ${file.name}`);
         const fileHandle = await requestFileHandle(file);
         
+        // Store file in IndexedDB
+        const audioFileId = `audio-${Date.now()}-${i}`;
+        console.log(`🔄 Storing audio file in IndexedDB: ${file.name}`);
+        await indexedDBService.storeAudioFile(audioFileId, file);
+        
         // Create URL for immediate use
         const fileUrl = URL.createObjectURL(file);
         console.log(`🔗 Created object URL for: ${file.name}`);
@@ -182,6 +188,8 @@ export const useAudioUpload = () => {
           cover: cover,
           fileHandle: fileHandle || undefined,
           filePath: fileHandle ? undefined : fileUrl, // Use URL as fallback
+          originalFilePath: file.webkitRelativePath || file.name, // Store original file path
+          audioFileId: audioFileId, // Store IndexedDB reference
           fileName: file.name,
           fileSize: file.size,
           fileType: file.type,

@@ -262,6 +262,7 @@ export const AudioPlayer = () => {
                   isPlaying={isPlaying}
                   showFolders={selectedFolder === undefined}
                   onDeleteTrack={handleDeleteTrack}
+                  onClearAll={handleClearStoredTracks}
                 />
               </div>
             </DialogContent>

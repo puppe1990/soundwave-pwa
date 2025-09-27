@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Track } from './useAudioPlayer';
+import { indexedDBService } from '@/lib/indexedDB';
 
 const STORAGE_KEY = 'soundwave-uploaded-tracks';
 const FOLDERS_STORAGE_KEY = 'soundwave-folders';
@@ -7,6 +8,9 @@ const FOLDERS_STORAGE_KEY = 'soundwave-folders';
 export interface StoredTrack extends Omit<Track, 'src'> {
   filePath?: string; // File path (for File System Access API)
   fileHandle?: FileSystemFileHandle; // File handle (for File System Access API)
+  originalFilePath?: string; // Original file path from user's system
+  fileData?: string; // Base64 encoded file data for persistence (legacy)
+  audioFileId?: string; // ID for audio file stored in IndexedDB
   fileName: string;
   fileSize: number;
   fileType: string;
@@ -25,97 +29,123 @@ export const useLocalStorage = () => {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load tracks and folders from localStorage on initialization
+  // Load tracks and folders from IndexedDB on initialization
   useEffect(() => {
     if (isInitialized) return;
     
     const loadStoredData = async () => {
       try {
-        console.log('🔄 Loading stored data from localStorage...');
+        console.log('🔄 Loading stored data from IndexedDB...');
         
-        // Load tracks
-        const storedTracks = localStorage.getItem(STORAGE_KEY);
-        if (storedTracks) {
-          const tracks: StoredTrack[] = JSON.parse(storedTracks);
-          console.log(`📁 Found ${tracks.length} stored tracks`);
-          
-          // Migrate old tracks without createdAt field
-          const migratedTracks = tracks.map(track => ({
-            ...track,
-            createdAt: track.createdAt || Date.now() - Math.random() * 1000000 // Random timestamp for old tracks
-          }));
-          setStoredTracks(migratedTracks);
-          console.log('✅ Tracks loaded and migrated successfully');
-        } else {
-          console.log('📁 No stored tracks found');
+        // Initialize IndexedDB
+        await indexedDBService.init();
+        
+        // Load tracks from IndexedDB
+        const tracks = await indexedDBService.getTracks();
+        console.log(`📁 Found ${tracks.length} stored tracks in IndexedDB`);
+        
+        // Migrate tracks without createdAt field
+        const migratedTracks = tracks.map(track => ({
+          ...track,
+          createdAt: track.createdAt || Date.now() - Math.random() * 1000000
+        }));
+        setStoredTracks(migratedTracks);
+        
+        // Load folders from IndexedDB
+        let foldersData = await indexedDBService.getFolders();
+        
+        if (foldersData.length === 0) {
+          // Try migrating from localStorage
+          const legacyFolders = localStorage.getItem(FOLDERS_STORAGE_KEY);
+          if (legacyFolders) {
+            foldersData = JSON.parse(legacyFolders);
+            await indexedDBService.storeFolders(foldersData);
+            console.log(`📂 Migrated ${foldersData.length} folders from localStorage`);
+          } else {
+            // Create default folder
+            const defaultFolder: Folder = {
+              id: 'default',
+              name: 'All Tracks',
+              createdAt: Date.now()
+            };
+            foldersData = [defaultFolder];
+            await indexedDBService.storeFolders(foldersData);
+            console.log('📂 Created default folder');
+          }
         }
-
-        // Load folders
-        const storedFolders = localStorage.getItem(FOLDERS_STORAGE_KEY);
-        if (storedFolders) {
-          const foldersData: Folder[] = JSON.parse(storedFolders);
-          setFolders(foldersData);
-          console.log(`📂 Found ${foldersData.length} folders:`, foldersData.map(f => f.name));
-        } else {
-          // Create default folder if none exist
-          const defaultFolder: Folder = {
-            id: 'default',
-            name: 'All Tracks',
-            createdAt: Date.now()
-          };
-          setFolders([defaultFolder]);
-          localStorage.setItem(FOLDERS_STORAGE_KEY, JSON.stringify([defaultFolder]));
-          console.log('📂 Created default folder');
+        
+        setFolders(foldersData);
+        console.log(`📂 Found ${foldersData.length} folders:`, foldersData.map(f => f.name));
+        
+        // Migrate legacy localStorage tracks if they exist
+        if (tracks.length === 0) {
+          await migrateLegacyTracks();
         }
         
         setIsInitialized(true);
-        console.log('✅ useLocalStorage initialized');
+        console.log('✅ useLocalStorage initialized with IndexedDB');
       } catch (error) {
         console.error('❌ Error loading stored data:', error);
-        setIsInitialized(true); // Set to true even on error to prevent infinite retries
+        setIsInitialized(true);
       }
     };
 
     loadStoredData();
   }, [isInitialized]);
 
-  // Save tracks to localStorage
+  // Migrate legacy tracks from localStorage to IndexedDB
+  const migrateLegacyTracks = useCallback(async () => {
+    try {
+      const legacyTracks = localStorage.getItem(STORAGE_KEY);
+      if (legacyTracks) {
+        const tracks: StoredTrack[] = JSON.parse(legacyTracks);
+        console.log(`🔄 Migrating ${tracks.length} legacy tracks from localStorage...`);
+        
+        for (const track of tracks) {
+          // Skip tracks that don't have base64 data
+          if (track.fileData) {
+            try {
+              // Convert base64 to blob
+              const response = await fetch(track.fileData);
+              const blob = await response.blob();
+              
+              // Store in IndexedDB
+              const audioFileId = `audio-${track.id}`;
+              await indexedDBService.storeAudioFile(audioFileId, blob);
+              
+              // Update track with audioFileId
+              track.audioFileId = audioFileId;
+              delete track.fileData; // Remove legacy base64 data
+            } catch (error) {
+              console.warn(`⚠️ Failed to migrate track ${track.id}:`, error);
+            }
+          }
+        }
+        
+        // Store migrated tracks in IndexedDB
+        await indexedDBService.storeTracks(tracks);
+        setStoredTracks(tracks);
+        
+        // Clear localStorage
+        localStorage.removeItem(STORAGE_KEY);
+        console.log(`✅ Migrated ${tracks.length} tracks to IndexedDB`);
+      }
+    } catch (error) {
+      console.error('❌ Error migrating legacy tracks:', error);
+    }
+  }, []);
+
+  // Save tracks to IndexedDB
   const saveTracks = useCallback(async (tracks: StoredTrack[]) => {
     try {
-      console.log(`💾 Saving ${tracks.length} tracks to localStorage...`);
+      console.log(`💾 Saving ${tracks.length} tracks to IndexedDB...`);
       
-      // Check estimated size before saving
-      const estimatedSize = JSON.stringify(tracks).length;
-      console.log(`📊 Estimated storage size: ${Math.round(estimatedSize / 1024)}KB`);
-      
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tracks));
+      await indexedDBService.storeTracks(tracks);
       setStoredTracks([...tracks]); // Force new array reference to trigger re-render
-      console.log('✅ Tracks saved successfully');
+      console.log('✅ Tracks saved successfully to IndexedDB');
       console.log(`📊 setStoredTracks called with ${tracks.length} tracks`);
     } catch (error) {
-      console.error('❌ Error saving tracks to localStorage:', error);
-      
-      // Handle quota exceeded error
-      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        console.log('⚠️ Storage quota exceeded, attempting cleanup...');
-        // Try to clean up old tracks if quota is exceeded
-        const sortedTracks = tracks.sort((a, b) => b.createdAt - a.createdAt);
-        const reducedTracks = sortedTracks.slice(0, Math.floor(tracks.length * 0.3)); // Keep 30% of tracks
-        
-        try {
-          console.log(`🧹 Reduced tracks from ${tracks.length} to ${reducedTracks.length}`);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(reducedTracks));
-          setStoredTracks(reducedTracks);
-          throw new Error('Storage quota exceeded. Some older tracks were removed to make space.');
-        } catch (retryError) {
-          console.log('🧹 Clearing all tracks due to persistent quota error');
-          // If still failing, clear all tracks
-          localStorage.removeItem(STORAGE_KEY);
-          setStoredTracks([]);
-          throw new Error('Storage quota exceeded. All tracks have been cleared. Please try uploading smaller files.');
-        }
-      }
-      
+      console.error('❌ Error saving tracks to IndexedDB:', error);
       throw error;
     }
   }, []);
@@ -132,13 +162,18 @@ export const useLocalStorage = () => {
 
   // Remove a track from storage
   const removeTrack = useCallback(async (trackId: string) => {
+    const trackToRemove = storedTracks.find(track => track.id === trackId);
+    if (trackToRemove?.audioFileId) {
+      await indexedDBService.deleteAudioFile(trackToRemove.audioFileId);
+    }
+    
     const updatedTracks = storedTracks.filter(track => track.id !== trackId);
     await saveTracks(updatedTracks);
   }, [storedTracks, saveTracks]);
 
   // Clear all stored tracks
   const clearAllTracks = useCallback(async () => {
-    localStorage.removeItem(STORAGE_KEY);
+    await indexedDBService.clearAllTracks();
     setStoredTracks([]);
   }, []);
 
@@ -152,6 +187,20 @@ export const useLocalStorage = () => {
         const file = await storedTrack.fileHandle.getFile();
         audioUrl = URL.createObjectURL(file);
         console.log(`🔗 Created URL from file handle: ${storedTrack.fileName}`);
+      } else if (storedTrack.audioFileId) {
+        // Use IndexedDB stored blob
+        const blob = await indexedDBService.getAudioFile(storedTrack.audioFileId);
+        if (blob) {
+          audioUrl = URL.createObjectURL(blob);
+          console.log(`🔗 Created URL from IndexedDB blob: ${storedTrack.fileName}`);
+        } else {
+          console.warn(`⚠️ Audio file not found in IndexedDB: ${storedTrack.audioFileId}`);
+          audioUrl = '';
+        }
+      } else if (storedTrack.fileData) {
+        // Legacy: Use stored base64 data
+        audioUrl = storedTrack.fileData;
+        console.log(`🔗 Using legacy base64 data for: ${storedTrack.fileName}`);
       } else if (storedTrack.filePath) {
         // Fallback to file path (may not work in all browsers)
         audioUrl = storedTrack.filePath;
@@ -159,6 +208,11 @@ export const useLocalStorage = () => {
       } else {
         console.warn(`⚠️ No file reference found for track: ${storedTrack.fileName}`);
         audioUrl = ''; // Will show error in player
+      }
+      
+      // Log the original file path for debugging
+      if (storedTrack.originalFilePath) {
+        console.log(`📁 Original file path stored: ${storedTrack.originalFilePath}`);
       }
     } catch (error) {
       console.error(`❌ Error accessing file for track ${storedTrack.fileName}:`, error);
@@ -209,24 +263,10 @@ export const useLocalStorage = () => {
   // Folder management functions
   const saveFolders = useCallback(async (foldersData: Folder[]) => {
     try {
-      localStorage.setItem(FOLDERS_STORAGE_KEY, JSON.stringify(foldersData));
+      await indexedDBService.storeFolders(foldersData);
       setFolders(foldersData);
     } catch (error) {
-      console.error('Error saving folders to localStorage:', error);
-      
-      // Handle quota exceeded error for folders
-      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        // Clear folders and recreate default
-        localStorage.removeItem(FOLDERS_STORAGE_KEY);
-        const defaultFolder: Folder = {
-          id: 'default',
-          name: 'All Tracks',
-          createdAt: Date.now()
-        };
-        setFolders([defaultFolder]);
-        throw new Error('Storage quota exceeded. Folders have been reset to default.');
-      }
-      
+      console.error('Error saving folders to IndexedDB:', error);
       throw error;
     }
   }, []);
@@ -274,27 +314,32 @@ export const useLocalStorage = () => {
   }, [storedTracks, saveTracks]);
 
   // Get storage usage information
-  const getStorageInfo = useCallback(() => {
+  const getStorageInfo = useCallback(async () => {
     try {
-      const tracksData = localStorage.getItem(STORAGE_KEY);
-      const foldersData = localStorage.getItem(FOLDERS_STORAGE_KEY);
-      
-      const tracksSize = tracksData ? new Blob([tracksData]).size : 0;
-      const foldersSize = foldersData ? new Blob([foldersData]).size : 0;
-      const totalSize = tracksSize + foldersSize;
+      const storageInfo = await indexedDBService.getStorageInfo();
       
       return {
-        tracksCount: storedTracks.length,
-        foldersCount: folders.length,
-        totalSize,
-        tracksSize,
-        foldersSize,
-        estimatedQuota: 5 * 1024 * 1024, // 5MB typical localStorage limit
-        usagePercentage: (totalSize / (5 * 1024 * 1024)) * 100
+        tracksCount: storageInfo.tracksCount,
+        foldersCount: storageInfo.foldersCount,
+        audioFilesCount: storageInfo.audioFilesCount,
+        totalSize: storageInfo.estimatedSize,
+        tracksSize: 0, // Not relevant for IndexedDB
+        foldersSize: 0, // Not relevant for IndexedDB
+        estimatedQuota: Number.MAX_SAFE_INTEGER, // IndexedDB has much larger quota
+        usagePercentage: 0 // Not easily calculable for IndexedDB
       };
     } catch (error) {
       console.error('Error getting storage info:', error);
-      return null;
+      return {
+        tracksCount: storedTracks.length,
+        foldersCount: folders.length,
+        audioFilesCount: 0,
+        totalSize: 0,
+        tracksSize: 0,
+        foldersSize: 0,
+        estimatedQuota: Number.MAX_SAFE_INTEGER,
+        usagePercentage: 0
+      };
     }
   }, [storedTracks, folders]);
 

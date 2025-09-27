@@ -22,6 +22,7 @@ interface PlaylistProps {
   isPlaying: boolean;
   showFolders?: boolean;
   onDeleteTrack?: (trackId: string) => void;
+  onClearAll?: () => void;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -30,7 +31,7 @@ const formatDuration = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-export const Playlist = ({ tracks, currentTrackIndex, onSelectTrack, isPlaying, showFolders = true, onDeleteTrack }: PlaylistProps) => {
+export const Playlist = ({ tracks, currentTrackIndex, onSelectTrack, isPlaying, showFolders = true, onDeleteTrack, onClearAll }: PlaylistProps) => {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['All Tracks']));
 
   // Group tracks by folder
@@ -151,11 +152,44 @@ export const Playlist = ({ tracks, currentTrackIndex, onSelectTrack, isPlaying, 
 
   return (
     <div className="bg-gradient-card rounded-xl p-6 shadow-card backdrop-blur-sm">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-gradient-primary rounded-lg">
-          <Music className="h-5 w-5 text-white" />
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-gradient-primary rounded-lg">
+            <Music className="h-5 w-5 text-white" />
+          </div>
+          <h2 className="text-xl font-semibold text-foreground">Playlist</h2>
         </div>
-        <h2 className="text-xl font-semibold text-foreground">Playlist</h2>
+        {tracks.length > 0 && onClearAll && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive border-destructive/20 hover:bg-destructive/10 hover:border-destructive/30"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear All
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear All Tracks</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete all {tracks.length} track{tracks.length !== 1 ? 's' : ''}? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={onClearAll}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Clear All
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       <ScrollArea className="h-80">
