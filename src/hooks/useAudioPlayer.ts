@@ -23,6 +23,7 @@ export interface AudioPlayerState {
 
 export const useAudioPlayer = (tracks: Track[]) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isReplayingRef = useRef(false);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -72,60 +73,122 @@ export const useAudioPlayer = (tracks: Track[]) => {
   // Update audio source when track changes
   useEffect(() => {
     if (audioRef.current && currentTrack) {
+      console.log(`🔄 TRACK CHANGE: Loading "${currentTrack.title}" by ${currentTrack.artist}`);
+      console.log(`🔄 TRACK CHANGE: Source: ${currentTrack.src}`);
+      
+      // Only pause if we're not intentionally replaying the same track
+      if (!isReplayingRef.current) {
+        console.log(`🔄 TRACK CHANGE: Pausing previous track`);
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        console.log(`🔄 TRACK CHANGE: Skipping pause (replay mode)`);
+      }
+      
       audioRef.current.src = currentTrack.src;
       audioRef.current.volume = volume;
       setCurrentTime(0);
+      isReplayingRef.current = false; // Reset the flag
+      console.log(`🔄 TRACK CHANGE: Audio source and volume updated for "${currentTrack.title}"`);
     }
   }, [currentTrack, volume]);
 
   const play = useCallback(async () => {
-    if (audioRef.current) {
+    if (audioRef.current && currentTrack) {
+      console.log(`▶️ PLAY: Starting playback of "${currentTrack.title}" by ${currentTrack.artist}`);
       try {
-        await audioRef.current.play();
-        setIsPlaying(true);
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          console.log(`▶️ PLAY: Play promise created, waiting for playback to start...`);
+          await playPromise;
+          setIsPlaying(true);
+          console.log(`▶️ PLAY: Successfully started playback of "${currentTrack.title}"`);
+        }
       } catch (error) {
-        console.error('Error playing audio:', error);
+        console.error('❌ PLAY: Error playing audio:', error);
+        setIsPlaying(false);
       }
+    } else if (!currentTrack) {
+      console.log(`⚠️ PLAY: No current track selected`);
+    } else {
+      console.log(`⚠️ PLAY: Audio element not available`);
     }
-  }, []);
+  }, [currentTrack]);
 
   const pause = useCallback(() => {
-    if (audioRef.current) {
+    if (audioRef.current && currentTrack) {
+      console.log(`⏸️ PAUSE: Pausing playback of "${currentTrack.title}"`);
       audioRef.current.pause();
       setIsPlaying(false);
+      console.log(`⏸️ PAUSE: Successfully paused "${currentTrack.title}"`);
+    } else if (!currentTrack) {
+      console.log(`⚠️ PAUSE: No current track to pause`);
+    } else {
+      console.log(`⚠️ PAUSE: Audio element not available`);
     }
-  }, []);
+  }, [currentTrack]);
 
   const togglePlay = useCallback(() => {
+    if (currentTrack) {
+      console.log(`🔄 TOGGLE: ${isPlaying ? 'Pausing' : 'Playing'} "${currentTrack.title}"`);
+    }
     if (isPlaying) {
       pause();
     } else {
       play();
     }
-  }, [isPlaying, play, pause]);
+  }, [isPlaying, play, pause, currentTrack]);
 
   const next = useCallback(() => {
     const nextIndex = (currentTrackIndex + 1) % tracks.length;
+    const currentTrackTitle = currentTrack?.title || 'Unknown';
+    const nextTrack = tracks[nextIndex];
+    const nextTrackTitle = nextTrack?.title || 'Unknown';
+    
+    console.log(`⏭️ NEXT: Moving from "${currentTrackTitle}" (${currentTrackIndex}) to "${nextTrackTitle}" (${nextIndex})`);
     setCurrentTrackIndex(nextIndex);
     setIsPlaying(false);
-  }, [currentTrackIndex, tracks.length]);
+    console.log(`⏭️ NEXT: Track changed to "${nextTrackTitle}"`);
+  }, [currentTrackIndex, tracks.length, currentTrack, tracks]);
 
   // Handle track ended event with repeat logic
-  const handleEnded = useCallback(() => {
+  const handleEnded = useCallback(async () => {
+    console.log(`🏁 TRACK ENDED: "${currentTrack?.title}" finished playing (repeat mode: ${repeatMode})`);
+    
     if (repeatMode === 'one') {
       // Repeat current track
+      console.log(`🔁 REPEAT ONE: Replaying "${currentTrack?.title}"`);
       if (audioRef.current) {
+        isReplayingRef.current = true; // Set flag to prevent pause in useEffect
         audioRef.current.currentTime = 0;
-        audioRef.current.play();
-        setIsPlaying(true);
+        try {
+          const playPromise = audioRef.current.play();
+          if (playPromise !== undefined) {
+            await playPromise;
+            setIsPlaying(true);
+            console.log(`🔁 REPEAT ONE: Successfully replayed "${currentTrack?.title}"`);
+          }
+        } catch (error) {
+          console.error('❌ REPEAT ONE: Error replaying audio:', error);
+          setIsPlaying(false);
+        }
       }
-    } else {
+    } else if (repeatMode === 'all') {
       // Go to next track (will loop back to first if at end)
       const nextIndex = (currentTrackIndex + 1) % tracks.length;
+      const nextTrack = tracks[nextIndex];
+      console.log(`🔄 REPEAT ALL: Moving to next track "${nextTrack?.title}" (${nextIndex})`);
+      setCurrentTrackIndex(nextIndex);
+      setIsPlaying(false);
+    } else {
+      // No repeat - go to next track
+      const nextIndex = (currentTrackIndex + 1) % tracks.length;
+      const nextTrack = tracks[nextIndex];
+      console.log(`⏭️ NO REPEAT: Moving to next track "${nextTrack?.title}" (${nextIndex})`);
       setCurrentTrackIndex(nextIndex);
       setIsPlaying(false);
     }
-  }, [repeatMode, currentTrackIndex, tracks.length]);
+  }, [repeatMode, currentTrackIndex, tracks.length, currentTrack, tracks]);
 
   // Update ended event listener when handleEnded changes
   useEffect(() => {
@@ -137,44 +200,74 @@ export const useAudioPlayer = (tracks: Track[]) => {
 
   const previous = useCallback(() => {
     const prevIndex = currentTrackIndex === 0 ? tracks.length - 1 : currentTrackIndex - 1;
+    const currentTrackTitle = currentTrack?.title || 'Unknown';
+    const prevTrack = tracks[prevIndex];
+    const prevTrackTitle = prevTrack?.title || 'Unknown';
+    
+    console.log(`⏮️ PREVIOUS: Moving from "${currentTrackTitle}" (${currentTrackIndex}) to "${prevTrackTitle}" (${prevIndex})`);
     setCurrentTrackIndex(prevIndex);
     setIsPlaying(false);
-  }, [currentTrackIndex, tracks.length]);
+    console.log(`⏮️ PREVIOUS: Track changed to "${prevTrackTitle}"`);
+  }, [currentTrackIndex, tracks.length, currentTrack, tracks]);
 
   const seek = useCallback((time: number) => {
-    if (audioRef.current) {
+    if (audioRef.current && currentTrack) {
+      const formattedTime = `${Math.floor(time / 60)}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
+      console.log(`⏱️ SEEK: Seeking to ${formattedTime} in "${currentTrack.title}"`);
       audioRef.current.currentTime = time;
       setCurrentTime(time);
+      console.log(`⏱️ SEEK: Successfully seeked to ${formattedTime}`);
+    } else if (!currentTrack) {
+      console.log(`⚠️ SEEK: No current track to seek in`);
+    } else {
+      console.log(`⚠️ SEEK: Audio element not available`);
     }
-  }, []);
+  }, [currentTrack]);
 
   const setVolumeLevel = useCallback((vol: number) => {
     const clampedVolume = Math.max(0, Math.min(1, vol));
+    const volumePercent = Math.round(clampedVolume * 100);
+    console.log(`🔊 VOLUME: Setting volume to ${volumePercent}% (${clampedVolume.toFixed(2)})`);
     setVolume(clampedVolume);
     if (audioRef.current) {
       audioRef.current.volume = clampedVolume;
+      console.log(`🔊 VOLUME: Successfully set audio volume to ${volumePercent}%`);
     }
   }, []);
 
   const selectTrack = useCallback((trackIndex: number) => {
     if (trackIndex >= 0 && trackIndex < tracks.length) {
+      const currentTrackTitle = currentTrack?.title || 'Unknown';
+      const selectedTrack = tracks[trackIndex];
+      const selectedTrackTitle = selectedTrack?.title || 'Unknown';
+      
+      console.log(`🎵 SELECT: Changing from "${currentTrackTitle}" (${currentTrackIndex}) to "${selectedTrackTitle}" (${trackIndex})`);
       setCurrentTrackIndex(trackIndex);
       setIsPlaying(false);
+      console.log(`🎵 SELECT: Track selected "${selectedTrackTitle}"`);
+    } else {
+      console.log(`⚠️ SELECT: Invalid track index ${trackIndex}, available tracks: ${tracks.length}`);
     }
-  }, [tracks.length]);
+  }, [tracks.length, currentTrack, tracks, currentTrackIndex]);
 
   const toggleRepeat = useCallback(() => {
     setRepeatMode(prev => {
+      let newMode: 'none' | 'one' | 'all';
       switch (prev) {
         case 'none':
-          return 'all';
+          newMode = 'all';
+          break;
         case 'all':
-          return 'one';
+          newMode = 'one';
+          break;
         case 'one':
-          return 'none';
+          newMode = 'none';
+          break;
         default:
-          return 'none';
+          newMode = 'none';
       }
+      console.log(`🔁 REPEAT: Changed from "${prev}" to "${newMode}"`);
+      return newMode;
     });
   }, []);
 

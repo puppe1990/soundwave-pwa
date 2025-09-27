@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { List, Upload, Trash2, FolderOpen, Palette } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 
 export const AudioPlayer = () => {
@@ -247,6 +247,9 @@ export const AudioPlayer = () => {
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Upload Audio Files</DialogTitle>
+                <DialogDescription>
+                  Select audio files to add to your music library. Supported formats include MP3, WAV, and other audio files.
+                </DialogDescription>
               </DialogHeader>
               <AudioUpload onTracksUploaded={handleTracksUploaded} />
             </DialogContent>
@@ -257,6 +260,9 @@ export const AudioPlayer = () => {
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Manage Folders</DialogTitle>
+                <DialogDescription>
+                  Organize your music by creating folders and moving tracks between them.
+                </DialogDescription>
               </DialogHeader>
               <FolderManager
                 folders={folders}
@@ -277,6 +283,9 @@ export const AudioPlayer = () => {
             <DialogContent className="max-w-md max-h-[80vh]">
               <DialogHeader>
                 <DialogTitle>Playlist</DialogTitle>
+                <DialogDescription>
+                  Browse and manage your music tracks. Click on any track to play it.
+                </DialogDescription>
               </DialogHeader>
               <div className="max-h-[60vh] overflow-y-auto">
                 <Playlist
@@ -297,6 +306,9 @@ export const AudioPlayer = () => {
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Customize Player Theme</DialogTitle>
+                <DialogDescription>
+                  Customize the appearance of your music player with different gradient themes.
+                </DialogDescription>
               </DialogHeader>
               <GradientPicker onClose={() => setShowGradientPicker(false)} />
             </DialogContent>
