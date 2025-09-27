@@ -4,9 +4,10 @@ import { PlaybackControls } from '@/components/PlaybackControls';
 import { Playlist } from '@/components/Playlist';
 import { AudioUpload } from '@/components/AudioUpload';
 import { FolderManager } from '@/components/FolderManager';
+import { GradientPicker } from '@/components/GradientPicker';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { List, Upload, Trash2, FolderOpen } from 'lucide-react';
+import { List, Upload, Trash2, FolderOpen, Palette } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -16,6 +17,7 @@ export const AudioPlayer = () => {
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [showFolders, setShowFolders] = useState(false);
+  const [showGradientPicker, setShowGradientPicker] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<string | undefined>();
   const [tracks, setTracks] = useState<Track[]>([]);
   const { 
@@ -148,6 +150,7 @@ export const AudioPlayer = () => {
                 size="icon"
                 onClick={() => setShowUpload(true)}
                 className="rounded-full hover:bg-secondary/50 text-foreground hover:text-primary transition-smooth"
+                title="Upload audio files"
               >
                 <Upload className="h-6 w-6" />
               </Button>
@@ -156,6 +159,7 @@ export const AudioPlayer = () => {
                 size="icon"
                 onClick={() => setShowFolders(true)}
                 className="rounded-full hover:bg-secondary/50 text-foreground hover:text-primary transition-smooth"
+                title="Manage folders"
               >
                 <FolderOpen className="h-6 w-6" />
               </Button>
@@ -164,8 +168,18 @@ export const AudioPlayer = () => {
                 size="icon"
                 onClick={() => setShowPlaylist(true)}
                 className="rounded-full hover:bg-secondary/50 text-foreground hover:text-primary transition-smooth"
+                title="View playlist"
               >
                 <List className="h-6 w-6" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowGradientPicker(true)}
+                className="rounded-full hover:bg-secondary/50 text-foreground hover:text-primary transition-smooth"
+                title="Customize gradient"
+              >
+                <Palette className="h-6 w-6" />
               </Button>
               {storedTracks.length > 0 && (
                 <Button
@@ -275,6 +289,16 @@ export const AudioPlayer = () => {
                   onClearAll={handleClearStoredTracks}
                 />
               </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Gradient Picker Modal */}
+          <Dialog open={showGradientPicker} onOpenChange={setShowGradientPicker}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Customize Player Theme</DialogTitle>
+              </DialogHeader>
+              <GradientPicker onClose={() => setShowGradientPicker(false)} />
             </DialogContent>
           </Dialog>
         </div>
