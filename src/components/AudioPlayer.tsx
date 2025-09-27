@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { List, Upload, Trash2, FolderOpen } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 
 export const AudioPlayer = () => {
@@ -112,18 +113,16 @@ export const AudioPlayer = () => {
     const tracksToLoad = await getTracksByFolder(selectedFolder);
     setTracks(tracksToLoad);
     setShowUpload(false);
-    if (!showPlaylist) {
-      setShowPlaylist(true);
-    }
+    // Open playlist modal to show the newly uploaded tracks
+    setShowPlaylist(true);
     console.log(`🎵 AudioPlayer: Reloaded ${tracksToLoad.length} tracks after upload`);
   };
 
   const handleFolderSelect = (folderName?: string) => {
     console.log(`🎵 AudioPlayer: Folder selected: ${folderName || 'All Tracks'}`);
     setSelectedFolder(folderName);
-    if (folderName) {
-      setShowPlaylist(true);
-    }
+    // Always open playlist modal when a folder is selected
+    setShowPlaylist(true);
   };
 
   return (
@@ -137,7 +136,7 @@ export const AudioPlayer = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowUpload(!showUpload)}
+                onClick={() => setShowUpload(true)}
                 className="rounded-full hover:bg-secondary/50 text-foreground hover:text-primary transition-smooth"
               >
                 <Upload className="h-6 w-6" />
@@ -145,7 +144,7 @@ export const AudioPlayer = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowFolders(!showFolders)}
+                onClick={() => setShowFolders(true)}
                 className="rounded-full hover:bg-secondary/50 text-foreground hover:text-primary transition-smooth"
               >
                 <FolderOpen className="h-6 w-6" />
@@ -153,7 +152,7 @@ export const AudioPlayer = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowPlaylist(!showPlaylist)}
+                onClick={() => setShowPlaylist(true)}
                 className="rounded-full hover:bg-secondary/50 text-foreground hover:text-primary transition-smooth"
               >
                 <List className="h-6 w-6" />
@@ -220,46 +219,53 @@ export const AudioPlayer = () => {
           </div>
 
           {/* Upload Modal */}
-          {showUpload && (
-            <div className="bg-gradient-card rounded-2xl shadow-player backdrop-blur-sm p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-foreground">Upload Audio Files</h2>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowUpload(false)}
-                  className="rounded-full hover:bg-secondary/50"
-                >
-                  ✕
-                </Button>
-              </div>
+          <Dialog open={showUpload} onOpenChange={setShowUpload}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Upload Audio Files</DialogTitle>
+              </DialogHeader>
               <AudioUpload onTracksUploaded={handleTracksUploaded} />
-            </div>
-          )}
+            </DialogContent>
+          </Dialog>
 
-          {/* Folder Manager */}
-          {showFolders && (
-            <FolderManager
-              folders={folders}
-              selectedFolder={selectedFolder}
-              onFolderSelect={handleFolderSelect}
-              onCreateFolder={createFolder}
-              onRenameFolder={renameFolder}
-              onDeleteFolder={deleteFolder}
-            />
-          )}
+          {/* Folder Manager Modal */}
+          <Dialog open={showFolders} onOpenChange={setShowFolders}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Manage Folders</DialogTitle>
+              </DialogHeader>
+              <FolderManager
+                folders={folders}
+                selectedFolder={selectedFolder}
+                onFolderSelect={(folderName) => {
+                  handleFolderSelect(folderName);
+                  setShowFolders(false);
+                }}
+                onCreateFolder={createFolder}
+                onRenameFolder={renameFolder}
+                onDeleteFolder={deleteFolder}
+              />
+            </DialogContent>
+          </Dialog>
 
-          {/* Playlist */}
-          {showPlaylist && (
-            <Playlist
-              tracks={tracks}
-              currentTrackIndex={currentTrackIndex}
-              onSelectTrack={selectTrack}
-              isPlaying={isPlaying}
-              showFolders={selectedFolder === undefined}
-              onDeleteTrack={handleDeleteTrack}
-            />
-          )}
+          {/* Playlist Modal */}
+          <Dialog open={showPlaylist} onOpenChange={setShowPlaylist}>
+            <DialogContent className="max-w-md max-h-[80vh]">
+              <DialogHeader>
+                <DialogTitle>Playlist</DialogTitle>
+              </DialogHeader>
+              <div className="max-h-[60vh] overflow-y-auto">
+                <Playlist
+                  tracks={tracks}
+                  currentTrackIndex={currentTrackIndex}
+                  onSelectTrack={selectTrack}
+                  isPlaying={isPlaying}
+                  showFolders={selectedFolder === undefined}
+                  onDeleteTrack={handleDeleteTrack}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>
