@@ -24,6 +24,7 @@ export interface AudioPlayerState {
 export const useAudioPlayer = (tracks: Track[]) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastSeekTimeRef = useRef(0);
+  const wasPlayingRef = useRef(false); // Track if audio was playing before track change
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -94,6 +95,15 @@ export const useAudioPlayer = (tracks: Track[]) => {
       setCurrentTime(0);
       
       console.log(`🔄 TRACK CHANGE: Audio source updated for "${currentTrack.title}"`);
+      
+      // Auto-play if audio was playing before track change
+      if (wasPlayingRef.current) {
+        console.log(`🔄 TRACK CHANGE: Auto-playing "${currentTrack.title}" (was playing before)`);
+        // Use setTimeout to ensure the audio source is fully loaded
+        setTimeout(() => {
+          play();
+        }, 100);
+      }
     }
   }, [currentTrackIndex, volume]); // Use currentTrackIndex for stability
 
@@ -186,10 +196,15 @@ export const useAudioPlayer = (tracks: Track[]) => {
     const nextTrackTitle = nextTrack?.title || 'Unknown';
     
     console.log(`⏭️ NEXT: Moving from "${currentTrackTitle}" (${currentTrackIndex}) to "${nextTrackTitle}" (${nextIndex})`);
+    
+    // Store current play state before changing track
+    wasPlayingRef.current = isPlaying;
+    console.log(`⏭️ NEXT: Storing play state: ${wasPlayingRef.current ? 'playing' : 'paused'}`);
+    
     setCurrentTrackIndex(nextIndex);
     setIsPlaying(false);
     console.log(`⏭️ NEXT: Track changed to "${nextTrackTitle}"`);
-  }, [currentTrackIndex, tracks.length, currentTrack, tracks]);
+  }, [currentTrackIndex, tracks.length, currentTrack, tracks, isPlaying]);
 
   // Handle track ended event with repeat logic
   const handleEnded = useCallback(async () => {
@@ -256,10 +271,15 @@ export const useAudioPlayer = (tracks: Track[]) => {
     const prevTrackTitle = prevTrack?.title || 'Unknown';
     
     console.log(`⏮️ PREVIOUS: Moving from "${currentTrackTitle}" (${currentTrackIndex}) to "${prevTrackTitle}" (${prevIndex})`);
+    
+    // Store current play state before changing track
+    wasPlayingRef.current = isPlaying;
+    console.log(`⏮️ PREVIOUS: Storing play state: ${wasPlayingRef.current ? 'playing' : 'paused'}`);
+    
     setCurrentTrackIndex(prevIndex);
     setIsPlaying(false);
     console.log(`⏮️ PREVIOUS: Track changed to "${prevTrackTitle}"`);
-  }, [currentTrackIndex, tracks.length, currentTrack, tracks]);
+  }, [currentTrackIndex, tracks.length, currentTrack, tracks, isPlaying]);
 
   const seek = useCallback((time: number) => {
     if (audioRef.current && currentTrack) {
@@ -297,13 +317,18 @@ export const useAudioPlayer = (tracks: Track[]) => {
       const selectedTrackTitle = selectedTrack?.title || 'Unknown';
       
       console.log(`🎵 SELECT: Changing from "${currentTrackTitle}" (${currentTrackIndex}) to "${selectedTrackTitle}" (${trackIndex})`);
+      
+      // Store current play state before changing track
+      wasPlayingRef.current = isPlaying;
+      console.log(`🎵 SELECT: Storing play state: ${wasPlayingRef.current ? 'playing' : 'paused'}`);
+      
       setCurrentTrackIndex(trackIndex);
       setIsPlaying(false);
       console.log(`🎵 SELECT: Track selected "${selectedTrackTitle}"`);
     } else {
       console.log(`⚠️ SELECT: Invalid track index ${trackIndex}, available tracks: ${tracks.length}`);
     }
-  }, [tracks.length, currentTrack, tracks, currentTrackIndex]);
+  }, [tracks.length, currentTrack, tracks, currentTrackIndex, isPlaying]);
 
   const toggleRepeat = useCallback(() => {
     setRepeatMode(prev => {
