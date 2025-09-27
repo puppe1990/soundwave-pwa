@@ -4,6 +4,7 @@ import { Upload, Music, FileAudio } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAudioUpload } from '@/hooks/useAudioUpload';
 import { Track } from '@/hooks/useAudioPlayer';
+import { useLocalStorage, StoredTrack } from '@/hooks/useLocalStorage';
 
 interface AudioUploadProps {
   onTracksUploaded: (tracks: Track[]) => void;
@@ -12,6 +13,7 @@ interface AudioUploadProps {
 export const AudioUpload = ({ onTracksUploaded }: AudioUploadProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { uploadAudio, isUploading, uploadProgress } = useAudioUpload();
+  const { addTracks, convertToTrack } = useLocalStorage();
   const { toast } = useToast();
 
   const handleFileSelect = () => {
@@ -28,13 +30,19 @@ export const AudioUpload = ({ onTracksUploaded }: AudioUploadProps) => {
         description: `Processing ${files.length} file${files.length > 1 ? 's' : ''}...`,
       });
 
-      const tracks = await uploadAudio(files);
+      const storedTracks = await uploadAudio(files);
       
-      if (tracks.length > 0) {
+      if (storedTracks.length > 0) {
+        // Save to localStorage
+        await addTracks(storedTracks);
+        
+        // Convert to Track objects for the player
+        const tracks = storedTracks.map(convertToTrack);
         onTracksUploaded(tracks);
+        
         toast({
           title: "Upload successful",
-          description: `Added ${tracks.length} track${tracks.length > 1 ? 's' : ''} to your playlist`,
+          description: `Added ${storedTracks.length} track${storedTracks.length > 1 ? 's' : ''} to your playlist and saved locally`,
         });
       } else {
         toast({

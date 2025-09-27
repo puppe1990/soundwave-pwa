@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Track } from './useAudioPlayer';
+import { StoredTrack } from './useLocalStorage';
 
 export interface AudioFile extends File {
   duration?: number;
@@ -8,6 +9,21 @@ export interface AudioFile extends File {
 export const useAudioUpload = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Convert File to base64 string
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove data URL prefix (e.g., "data:audio/mp3;base64,")
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  };
 
   const extractAudioMetadata = (file: File): Promise<{
     duration: number;
@@ -114,11 +130,11 @@ export const useAudioUpload = () => {
     return lines.slice(0, 3); // Max 3 lines
   };
 
-  const uploadAudio = useCallback(async (files: FileList): Promise<Track[]> => {
+  const uploadAudio = useCallback(async (files: FileList): Promise<StoredTrack[]> => {
     setIsUploading(true);
     setUploadProgress(0);
     
-    const tracks: Track[] = [];
+    const tracks: StoredTrack[] = [];
     const totalFiles = files.length;
     
     // Validate audio files
@@ -145,16 +161,19 @@ export const useAudioUpload = () => {
       try {
         const metadata = await extractAudioMetadata(file);
         const cover = generateCoverArt(metadata.title, metadata.artist);
-        const audioUrl = URL.createObjectURL(file);
+        const fileData = await fileToBase64(file);
         
-        const track: Track = {
+        const track: StoredTrack = {
           id: `uploaded-${Date.now()}-${i}`,
           title: metadata.title,
           artist: metadata.artist,
           album: metadata.album,
           duration: metadata.duration,
-          src: audioUrl,
           cover: cover,
+          fileData: fileData,
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
         };
         
         tracks.push(track);

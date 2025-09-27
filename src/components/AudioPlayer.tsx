@@ -3,9 +3,11 @@ import { TrackInfo } from '@/components/TrackInfo';
 import { PlaybackControls } from '@/components/PlaybackControls';
 import { Playlist } from '@/components/Playlist';
 import { AudioUpload } from '@/components/AudioUpload';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { List, Upload } from 'lucide-react';
+import { List, Upload, Trash2 } from 'lucide-react';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useToast } from '@/hooks/use-toast';
 
 // Sample tracks for demo
 import albumCover1 from '@/assets/album-cover-1.jpg';
@@ -46,6 +48,44 @@ export const AudioPlayer = () => {
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [tracks, setTracks] = useState<Track[]>(sampleTracks);
+  const { getTracks, clearAllTracks, storedTracks } = useLocalStorage();
+  const { toast } = useToast();
+
+  // Load stored tracks on component mount
+  useEffect(() => {
+    const loadStoredTracks = () => {
+      try {
+        const storedTracks = getTracks();
+        if (storedTracks.length > 0) {
+          setTracks(prev => [...prev, ...storedTracks]);
+        }
+      } catch (error) {
+        console.error('Error loading stored tracks:', error);
+      }
+    };
+
+    loadStoredTracks();
+  }, [getTracks]);
+
+  // Handle clearing all stored tracks
+  const handleClearStoredTracks = async () => {
+    try {
+      await clearAllTracks();
+      // Reset tracks to only sample tracks
+      setTracks(sampleTracks);
+      toast({
+        title: "Stored tracks cleared",
+        description: "All uploaded tracks have been removed from local storage",
+      });
+    } catch (error) {
+      console.error('Error clearing stored tracks:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear stored tracks",
+        variant: "destructive",
+      });
+    }
+  };
   
   const {
     currentTrack,
@@ -95,6 +135,17 @@ export const AudioPlayer = () => {
               >
                 <List className="h-6 w-6" />
               </Button>
+              {storedTracks.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleClearStoredTracks}
+                  className="rounded-full hover:bg-secondary/50 text-foreground hover:text-destructive transition-smooth"
+                  title="Clear stored tracks"
+                >
+                  <Trash2 className="h-6 w-6" />
+                </Button>
+              )}
             </div>
           </div>
 
