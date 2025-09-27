@@ -9,45 +9,11 @@ import { List, Upload, Trash2 } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
 
-// Sample tracks for demo
-import albumCover1 from '@/assets/album-cover-1.jpg';
-import albumCover2 from '@/assets/album-cover-2.jpg';
-import albumCover3 from '@/assets/album-cover-3.jpg';
-
-const sampleTracks: Track[] = [
-  {
-    id: '1',
-    title: 'Neon Dreams',
-    artist: 'Synthwave Artist',
-    album: 'Future Nights',
-    duration: 245, // 4:05
-    src: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav', // Demo audio
-    cover: albumCover1,
-  },
-  {
-    id: '2',
-    title: 'Midnight Drive',
-    artist: 'Retrowave Producer',
-    album: 'City Lights',
-    duration: 198, // 3:18
-    src: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav', // Demo audio
-    cover: albumCover2,
-  },
-  {
-    id: '3',
-    title: 'Sunset Boulevard',
-    artist: 'Chillwave Collective',
-    album: 'Golden Hour',
-    duration: 312, // 5:12
-    src: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav', // Demo audio
-    cover: albumCover3,
-  },
-];
 
 export const AudioPlayer = () => {
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
-  const [tracks, setTracks] = useState<Track[]>(sampleTracks);
+  const [tracks, setTracks] = useState<Track[]>([]);
   const { getTracks, clearAllTracks, storedTracks } = useLocalStorage();
   const { toast } = useToast();
 
@@ -71,8 +37,8 @@ export const AudioPlayer = () => {
   const handleClearStoredTracks = async () => {
     try {
       await clearAllTracks();
-      // Reset tracks to only sample tracks
-      setTracks(sampleTracks);
+      // Reset tracks to empty array
+      setTracks([]);
       toast({
         title: "Stored tracks cleared",
         description: "All uploaded tracks have been removed from local storage",
@@ -155,7 +121,7 @@ export const AudioPlayer = () => {
             <div className="relative p-8 pb-0">
               <div className="aspect-square max-w-80 mx-auto relative">
                 <img
-                  src={currentTrack?.cover || albumCover1}
+                  src={currentTrack?.cover || '/placeholder.svg'}
                   alt={currentTrack ? `${currentTrack.album} cover` : 'Album cover'}
                   className="w-full h-full object-cover rounded-xl shadow-card"
                 />
