@@ -2,9 +2,10 @@ import { useAudioPlayer, Track } from '@/hooks/useAudioPlayer';
 import { TrackInfo } from '@/components/TrackInfo';
 import { PlaybackControls } from '@/components/PlaybackControls';
 import { Playlist } from '@/components/Playlist';
+import { AudioUpload } from '@/components/AudioUpload';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { List } from 'lucide-react';
+import { List, Upload } from 'lucide-react';
 
 // Sample tracks for demo
 import albumCover1 from '@/assets/album-cover-1.jpg';
@@ -43,6 +44,8 @@ const sampleTracks: Track[] = [
 
 export const AudioPlayer = () => {
   const [showPlaylist, setShowPlaylist] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
+  const [tracks, setTracks] = useState<Track[]>(sampleTracks);
   
   const {
     currentTrack,
@@ -58,7 +61,15 @@ export const AudioPlayer = () => {
     seek,
     setVolume,
     selectTrack,
-  } = useAudioPlayer(sampleTracks);
+  } = useAudioPlayer(tracks);
+
+  const handleTracksUploaded = (newTracks: Track[]) => {
+    setTracks(prev => [...prev, ...newTracks]);
+    setShowUpload(false);
+    if (!showPlaylist) {
+      setShowPlaylist(true);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-player">
@@ -67,14 +78,24 @@ export const AudioPlayer = () => {
           {/* Header */}
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-foreground">Music Player</h1>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowPlaylist(!showPlaylist)}
-              className="rounded-full hover:bg-secondary/50 text-foreground hover:text-primary transition-smooth"
-            >
-              <List className="h-6 w-6" />
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowUpload(!showUpload)}
+                className="rounded-full hover:bg-secondary/50 text-foreground hover:text-primary transition-smooth"
+              >
+                <Upload className="h-6 w-6" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowPlaylist(!showPlaylist)}
+                className="rounded-full hover:bg-secondary/50 text-foreground hover:text-primary transition-smooth"
+              >
+                <List className="h-6 w-6" />
+              </Button>
+            </div>
           </div>
 
           {/* Main Player Card */}
@@ -122,10 +143,28 @@ export const AudioPlayer = () => {
             />
           </div>
 
+          {/* Upload Modal */}
+          {showUpload && (
+            <div className="bg-gradient-card rounded-2xl shadow-player backdrop-blur-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-foreground">Upload Audio Files</h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowUpload(false)}
+                  className="rounded-full hover:bg-secondary/50"
+                >
+                  ✕
+                </Button>
+              </div>
+              <AudioUpload onTracksUploaded={handleTracksUploaded} />
+            </div>
+          )}
+
           {/* Playlist */}
           {showPlaylist && (
             <Playlist
-              tracks={sampleTracks}
+              tracks={tracks}
               currentTrackIndex={currentTrackIndex}
               onSelectTrack={selectTrack}
               isPlaying={isPlaying}
