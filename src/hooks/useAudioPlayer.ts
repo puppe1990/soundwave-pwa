@@ -189,43 +189,6 @@ export const useAudioPlayer = (tracks: Track[]) => {
     };
   }, [attemptResumeAfterInterruption, isMobile]);
 
-  // Update audio source when track changes
-  useEffect(() => {
-    if (audioRef.current && currentTrack) {
-      console.log(`🔄 TRACK CHANGE: Loading "${currentTrack.title}" by ${currentTrack.artist}`);
-      
-      pauseOriginRef.current = 'track-change';
-      audioRef.current.pause();
-      setIsPlaying(false);
-      audioRef.current.src = currentTrack.src;
-      audioRef.current.volume = volume;
-      setCurrentTime(0);
-      
-      console.log(`🔄 TRACK CHANGE: Audio source updated for "${currentTrack.title}"`);
-      
-      // Auto-play if audio was playing before track change
-      if (wasPlayingRef.current) {
-        console.log(`🔄 TRACK CHANGE: Auto-playing "${currentTrack.title}" (was playing before)`);
-        
-        // For mobile, check if user has interacted before attempting autoplay
-        if (isMobile && !hasUserInteractedRef.current) {
-          console.log(`📱 MOBILE TRACK CHANGE: User hasn't interacted, can't autoplay`);
-          // Show toast to guide user
-          toast({
-            title: "Tap to Play",
-            description: "Please tap the play button to continue playback on mobile devices.",
-            duration: 3000,
-          });
-        } else {
-          // Use setTimeout to ensure the audio source is fully loaded
-          setTimeout(() => {
-            play();
-          }, 100);
-        }
-      }
-    }
-  }, [currentTrack, volume, isMobile, play, toast]);
-
   const play = useCallback(async () => {
     if (audioRef.current && currentTrack) {
       console.log(`▶️ PLAY: Starting playback of "${currentTrack.title}" by ${currentTrack.artist}`);
@@ -299,6 +262,41 @@ export const useAudioPlayer = (tracks: Track[]) => {
       console.log(`⚠️ PLAY: Audio element not available`);
     }
   }, [currentTrack, volume, toast]);
+
+  // Update audio source when track changes
+  useEffect(() => {
+    if (audioRef.current && currentTrack) {
+      console.log(`🔄 TRACK CHANGE: Loading "${currentTrack.title}" by ${currentTrack.artist}`);
+      
+      pauseOriginRef.current = 'track-change';
+      audioRef.current.pause();
+      setIsPlaying(false);
+      audioRef.current.src = currentTrack.src;
+      audioRef.current.volume = volume;
+      setCurrentTime(0);
+      
+      console.log(`🔄 TRACK CHANGE: Audio source updated for "${currentTrack.title}"`);
+      
+      // Auto-play if audio was playing before track change
+      if (wasPlayingRef.current) {
+        console.log(`🔄 TRACK CHANGE: Auto-playing "${currentTrack.title}" (was playing before)`);
+        
+        // For mobile, check if user has interacted before attempting autoplay
+        if (isMobile && !hasUserInteractedRef.current) {
+          console.log(`📱 MOBILE TRACK CHANGE: User hasn't interacted, can't autoplay`);
+          toast({
+            title: "Tap to Play",
+            description: "Please tap the play button to continue playback on mobile devices.",
+            duration: 3000,
+          });
+        } else {
+          setTimeout(() => {
+            void play();
+          }, 100);
+        }
+      }
+    }
+  }, [currentTrack, volume, isMobile, play, toast]);
 
   const pause = useCallback(() => {
     if (audioRef.current && currentTrack) {
