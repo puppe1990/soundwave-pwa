@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { Track } from './useAudioPlayer';
 import { StoredTrack } from './useLocalStorage';
 import { indexedDBService } from '@/lib/indexedDB';
 
@@ -47,7 +46,7 @@ export const useAudioUpload = () => {
         
         let title = fileName;
         let artist = 'Unknown Artist';
-        let album = 'Uploaded Music';
+        const album = 'Uploaded Music';
         
         if (parts.length >= 2) {
           artist = parts[0].trim();
@@ -72,7 +71,26 @@ export const useAudioUpload = () => {
     });
   };
 
-  const generateCoverArt = (title: string, artist: string): string => {
+  const wrapText = useCallback((ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] => {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = words[0];
+
+    for (let i = 1; i < words.length; i++) {
+      const word = words[i];
+      const width = ctx.measureText(currentLine + ' ' + word).width;
+      if (width < maxWidth) {
+        currentLine += ' ' + word;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    lines.push(currentLine);
+    return lines.slice(0, 3); // Max 3 lines
+  }, []);
+
+  const generateCoverArt = useCallback((title: string, artist: string): string => {
     // Create a simple canvas-based cover art
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -112,26 +130,7 @@ export const useAudioUpload = () => {
     }
     
     return canvas.toDataURL('image/png');
-  };
-
-  const wrapText = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] => {
-    const words = text.split(' ');
-    const lines: string[] = [];
-    let currentLine = words[0];
-
-    for (let i = 1; i < words.length; i++) {
-      const word = words[i];
-      const width = ctx.measureText(currentLine + ' ' + word).width;
-      if (width < maxWidth) {
-        currentLine += ' ' + word;
-      } else {
-        lines.push(currentLine);
-        currentLine = word;
-      }
-    }
-    lines.push(currentLine);
-    return lines.slice(0, 3); // Max 3 lines
-  };
+  }, [wrapText]);
 
   const uploadAudio = useCallback(async (files: FileList): Promise<StoredTrack[]> => {
     console.log(`🔄 useAudioUpload: Starting upload of ${files.length} files`);
@@ -210,7 +209,7 @@ export const useAudioUpload = () => {
     
     console.log(`✅ useAudioUpload: Completed processing ${tracks.length}/${totalFiles} files successfully`);
     return tracks;
-  }, []);
+  }, [generateCoverArt]);
 
   return {
     uploadAudio,

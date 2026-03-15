@@ -28,6 +28,8 @@ export const useAudioPlayer = (tracks: Track[]) => {
   const wasPlayingRef = useRef(false); // Track if audio was playing before track change
   const hasUserInteractedRef = useRef(false); // Track if user has interacted with audio
   const manuallyPausedRef = useRef(false); // Track if user manually paused (vs natural track end)
+  const pauseOriginRef = useRef<'none' | 'manual' | 'track-change' | 'cleanup'>('none');
+  const externalInterruptionRef = useRef(false);
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -40,12 +42,39 @@ export const useAudioPlayer = (tracks: Track[]) => {
 
   const currentTrack = tracks[currentTrackIndex] || null;
 
+  const attemptResumeAfterInterruption = useCallback(async () => {
+    if (!isMobile || !audioRef.current || !currentTrack) {
+      return;
+    }
+
+    if (!externalInterruptionRef.current || manuallyPausedRef.current || !hasUserInteractedRef.current) {
+      return;
+    }
+
+    if (document.hidden || !audioRef.current.paused) {
+      return;
+    }
+
+    console.log(`📱 RESUME: Attempting to resume "${currentTrack.title}" after external interruption`);
+
+    try {
+      await audioRef.current.play();
+      setIsPlaying(true);
+      wasPlayingRef.current = true;
+      manuallyPausedRef.current = false;
+      externalInterruptionRef.current = false;
+      console.log(`📱 RESUME: Playback restored for "${currentTrack.title}"`);
+    } catch (error) {
+      console.log(`📱 RESUME: Resume attempt failed, waiting for next visibility/focus event`, error);
+    }
+  }, [currentTrack, isMobile]);
+
   // Initialize audio element
   useEffect(() => {
     audioRef.current = new Audio();
     const audio = audioRef.current;
     
-    // iOS Safari specific: prevent auto-resume
+    // Use explicit playback control instead of browser-managed resume behavior.
     audio.preload = 'none';
     audio.controls = false;
     
@@ -70,6 +99,43 @@ export const useAudioPlayer = (tracks: Track[]) => {
       setIsLoading(false);
     };
 
+    const handlePlayEvent = () => {
+      setIsPlaying(true);
+      wasPlayingRef.current = true;
+      manuallyPausedRef.current = false;
+      externalInterruptionRef.current = false;
+      pauseOriginRef.current = 'none';
+    };
+
+    const handlePauseEvent = () => {
+      setIsPlaying(false);
+
+      if (audio.ended) {
+        pauseOriginRef.current = 'none';
+        return;
+      }
+
+      if (pauseOriginRef.current === 'manual') {
+        wasPlayingRef.current = false;
+        manuallyPausedRef.current = true;
+        externalInterruptionRef.current = false;
+        pauseOriginRef.current = 'none';
+        return;
+      }
+
+      if (pauseOriginRef.current === 'track-change' || pauseOriginRef.current === 'cleanup') {
+        pauseOriginRef.current = 'none';
+        return;
+      }
+
+      if (wasPlayingRef.current && !manuallyPausedRef.current) {
+        externalInterruptionRef.current = true;
+        console.log(`📱 INTERRUPTION: External audio interruption detected`);
+      }
+
+      pauseOriginRef.current = 'none';
+    };
+
     const handleError = (e: Event) => {
       console.error(`🎵 AUDIO INIT: Audio error:`, e);
       setIsLoading(false);
@@ -79,6 +145,8 @@ export const useAudioPlayer = (tracks: Track[]) => {
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('loadstart', handleLoadStart);
     audio.addEventListener('canplaythrough', handleCanPlayThrough);
+    audio.addEventListener('play', handlePlayEvent);
+    audio.addEventListener('pause', handlePauseEvent);
     audio.addEventListener('error', handleError);
 
     return () => {
@@ -87,16 +155,46 @@ export const useAudioPlayer = (tracks: Track[]) => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('loadstart', handleLoadStart);
       audio.removeEventListener('canplaythrough', handleCanPlayThrough);
+      audio.removeEventListener('play', handlePlayEvent);
+      audio.removeEventListener('pause', handlePauseEvent);
       audio.removeEventListener('error', handleError);
+      pauseOriginRef.current = 'cleanup';
       audio.pause();
     };
   }, []);
+
+  useEffect(() => {
+    if (!isMobile) {
+      return;
+    }
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        void attemptResumeAfterInterruption();
+      }
+    };
+
+    const handleWindowFocus = () => {
+      void attemptResumeAfterInterruption();
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('pageshow', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('pageshow', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [attemptResumeAfterInterruption, isMobile]);
 
   // Update audio source when track changes
   useEffect(() => {
     if (audioRef.current && currentTrack) {
       console.log(`🔄 TRACK CHANGE: Loading "${currentTrack.title}" by ${currentTrack.artist}`);
       
+      pauseOriginRef.current = 'track-change';
       audioRef.current.pause();
       setIsPlaying(false);
       audioRef.current.src = currentTrack.src;
@@ -126,7 +224,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
         }
       }
     }
-  }, [currentTrackIndex, volume]); // Use currentTrackIndex for stability
+  }, [currentTrack, volume, isMobile, play, toast]);
 
   const play = useCallback(async () => {
     if (audioRef.current && currentTrack) {
@@ -205,10 +303,12 @@ export const useAudioPlayer = (tracks: Track[]) => {
   const pause = useCallback(() => {
     if (audioRef.current && currentTrack) {
       console.log(`⏸️ PAUSE: Pausing playback of "${currentTrack.title}"`);
+      pauseOriginRef.current = 'manual';
       audioRef.current.pause();
       setIsPlaying(false);
       wasPlayingRef.current = false; // Clear the wasPlaying flag when manually pausing
       manuallyPausedRef.current = true; // Mark that user manually paused
+      externalInterruptionRef.current = false;
       console.log(`⏸️ PAUSE: Successfully paused "${currentTrack.title}"`);
     } else if (!currentTrack) {
       console.log(`⚠️ PAUSE: No current track to pause`);
@@ -228,10 +328,12 @@ export const useAudioPlayer = (tracks: Track[]) => {
     if (isPlaying) {
       // Pause the audio
       if (audioRef.current) {
+        pauseOriginRef.current = 'manual';
         audioRef.current.pause();
         setIsPlaying(false);
         wasPlayingRef.current = false; // Clear the wasPlaying flag when manually pausing
         manuallyPausedRef.current = true; // Mark that user manually paused
+        externalInterruptionRef.current = false;
         console.log(`⏸️ TOGGLE: Paused "${currentTrack?.title}"`);
       }
     } else {
@@ -286,7 +388,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
     setCurrentTrackIndex(nextIndex);
     setIsPlaying(false);
     console.log(`⏭️ NEXT: Track changed to "${nextTrackTitle}"`);
-  }, [currentTrackIndex, tracks.length, currentTrack, tracks, isPlaying]);
+  }, [currentTrackIndex, currentTrack, tracks, isPlaying]);
 
   // Handle track ended event with repeat logic
   const handleEnded = useCallback(async () => {
@@ -409,7 +511,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
         wasPlayingRef.current = false; // Clear the wasPlaying flag when track ends naturally
       }
     }
-  }, [repeatMode, currentTrackIndex, tracks]);
+  }, [repeatMode, currentTrackIndex, tracks, isMobile, toast]);
 
   // Update ended event listener when handleEnded changes
   useEffect(() => {
@@ -444,7 +546,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
     setCurrentTrackIndex(prevIndex);
     setIsPlaying(false);
     console.log(`⏮️ PREVIOUS: Track changed to "${prevTrackTitle}"`);
-  }, [currentTrackIndex, tracks.length, currentTrack, tracks, isPlaying]);
+  }, [currentTrackIndex, currentTrack, tracks, isPlaying]);
 
   const seek = useCallback((time: number) => {
     if (audioRef.current && currentTrack) {
@@ -505,7 +607,7 @@ export const useAudioPlayer = (tracks: Track[]) => {
     } else {
       console.log(`⚠️ SELECT: Invalid track index ${trackIndex}, available tracks: ${tracks.length}`);
     }
-  }, [tracks.length, currentTrack, tracks, currentTrackIndex, isPlaying]);
+  }, [currentTrack, tracks, currentTrackIndex, isPlaying]);
 
   const toggleRepeat = useCallback(() => {
     // Mark that user has interacted with audio controls

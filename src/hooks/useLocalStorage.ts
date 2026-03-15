@@ -30,6 +30,48 @@ export const useLocalStorage = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Migrate legacy tracks from localStorage to IndexedDB
+  const migrateLegacyTracks = useCallback(async () => {
+    try {
+      const legacyTracks = localStorage.getItem(STORAGE_KEY);
+      if (legacyTracks) {
+        const tracks: StoredTrack[] = JSON.parse(legacyTracks);
+        console.log(`🔄 Migrating ${tracks.length} legacy tracks from localStorage...`);
+        
+        for (const track of tracks) {
+          // Skip tracks that don't have base64 data
+          if (track.fileData) {
+            try {
+              // Convert base64 to blob
+              const response = await fetch(track.fileData);
+              const blob = await response.blob();
+              
+              // Store in IndexedDB
+              const audioFileId = `audio-${track.id}`;
+              await indexedDBService.storeAudioFile(audioFileId, blob);
+              
+              // Update track with audioFileId
+              track.audioFileId = audioFileId;
+              delete track.fileData; // Remove legacy base64 data
+            } catch (error) {
+              console.warn(`⚠️ Failed to migrate track ${track.id}:`, error);
+            }
+          }
+        }
+        
+        // Store migrated tracks in IndexedDB
+        await indexedDBService.storeTracks(tracks);
+        setStoredTracks(tracks);
+        
+        // Clear localStorage
+        localStorage.removeItem(STORAGE_KEY);
+        console.log(`✅ Migrated ${tracks.length} tracks to IndexedDB`);
+      }
+    } catch (error) {
+      console.error('❌ Error migrating legacy tracks:', error);
+    }
+  }, []);
+
   // Load tracks and folders from IndexedDB on initialization
   useEffect(() => {
     if (isInitialized) return;
@@ -94,49 +136,7 @@ export const useLocalStorage = () => {
     };
 
     loadStoredData();
-  }, [isInitialized]);
-
-  // Migrate legacy tracks from localStorage to IndexedDB
-  const migrateLegacyTracks = useCallback(async () => {
-    try {
-      const legacyTracks = localStorage.getItem(STORAGE_KEY);
-      if (legacyTracks) {
-        const tracks: StoredTrack[] = JSON.parse(legacyTracks);
-        console.log(`🔄 Migrating ${tracks.length} legacy tracks from localStorage...`);
-        
-        for (const track of tracks) {
-          // Skip tracks that don't have base64 data
-          if (track.fileData) {
-            try {
-              // Convert base64 to blob
-              const response = await fetch(track.fileData);
-              const blob = await response.blob();
-              
-              // Store in IndexedDB
-              const audioFileId = `audio-${track.id}`;
-              await indexedDBService.storeAudioFile(audioFileId, blob);
-              
-              // Update track with audioFileId
-              track.audioFileId = audioFileId;
-              delete track.fileData; // Remove legacy base64 data
-            } catch (error) {
-              console.warn(`⚠️ Failed to migrate track ${track.id}:`, error);
-            }
-          }
-        }
-        
-        // Store migrated tracks in IndexedDB
-        await indexedDBService.storeTracks(tracks);
-        setStoredTracks(tracks);
-        
-        // Clear localStorage
-        localStorage.removeItem(STORAGE_KEY);
-        console.log(`✅ Migrated ${tracks.length} tracks to IndexedDB`);
-      }
-    } catch (error) {
-      console.error('❌ Error migrating legacy tracks:', error);
-    }
-  }, []);
+  }, [isInitialized, migrateLegacyTracks]);
 
   // Save tracks to IndexedDB
   const saveTracks = useCallback(async (tracks: StoredTrack[]) => {
