@@ -30,6 +30,9 @@ export default defineConfig(({ mode }) => ({
         "favicon-16x16.png",
         "favicon-32x32.png",
         "icon-source.svg",
+        "apple-touch-icon.png",
+        "apple-touch-icon-152x152.png",
+        "apple-touch-icon-167x167.png",
       ],
       manifest: {
         id: PWA_START_URL,
@@ -76,10 +79,16 @@ export default defineConfig(({ mode }) => ({
             purpose: "any",
           },
           {
+            src: icon("180x180"),
+            sizes: "180x180",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
             src: icon("192x192"),
             sizes: "192x192",
             type: "image/png",
-            purpose: "any maskable",
+            purpose: "any",
           },
           {
             src: icon("384x384"),
@@ -91,7 +100,7 @@ export default defineConfig(({ mode }) => ({
             src: icon("512x512"),
             sizes: "512x512",
             type: "image/png",
-            purpose: "any maskable",
+            purpose: "any",
           },
           {
             src: icon("1024x1024"),

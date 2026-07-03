@@ -8,7 +8,8 @@ const sourceSvg = readFileSync(join(root, "public/icon-source.svg"));
 const iconsDir = join(root, "public/icons");
 const publicDir = join(root, "public");
 
-const pwaSizes = [72, 96, 128, 144, 152, 192, 384, 512, 1024];
+const pwaSizes = [72, 96, 128, 144, 152, 180, 192, 384, 512, 1024];
+const appleTouchSizes = [180, 152, 167];
 
 const createIco = (pngBuffers) => {
   const images = pngBuffers.map((buffer) => {
@@ -55,6 +56,15 @@ for (const size of pwaSizes) {
   await sharp(sourceSvg).resize(size, size).png().toFile(output);
   console.log(`generated ${output}`);
 }
+
+for (const size of appleTouchSizes) {
+  const output = join(publicDir, `apple-touch-icon-${size}x${size}.png`);
+  await sharp(sourceSvg).resize(size, size).png().toFile(output);
+  console.log(`generated ${output}`);
+}
+
+await sharp(sourceSvg).resize(180, 180).png().toFile(join(publicDir, "apple-touch-icon.png"));
+console.log("generated public/apple-touch-icon.png");
 
 const favicon16 = await sharp(sourceSvg).resize(16, 16).png().toBuffer();
 const favicon32 = await sharp(sourceSvg).resize(32, 32).png().toBuffer();
