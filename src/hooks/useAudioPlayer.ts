@@ -1,5 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  getResumeDelaysMs,
+  getSuccessfulResumeState,
+  handleAudioPause,
+  shouldAttemptResume,
+  type InterruptionState,
+  type PauseOrigin,
+} from "@/lib/audio-interruption";
 
 export interface Track {
   id: string;
@@ -28,8 +36,27 @@ export const useAudioPlayer = (tracks: Track[]) => {
   const wasPlayingRef = useRef(false); // Track if audio was playing before track change
   const hasUserInteractedRef = useRef(false); // Track if user has interacted with audio
   const manuallyPausedRef = useRef(false); // Track if user manually paused (vs natural track end)
-  const pauseOriginRef = useRef<"none" | "manual" | "track-change" | "cleanup">("none");
+  const pauseOriginRef = useRef<PauseOrigin>("none");
   const externalInterruptionRef = useRef(false);
+
+  const getInterruptionState = useCallback(
+    (): InterruptionState => ({
+      wasPlaying: wasPlayingRef.current,
+      manuallyPaused: manuallyPausedRef.current,
+      externalInterruption: externalInterruptionRef.current,
+      hasUserInteracted: hasUserInteractedRef.current,
+      pauseOrigin: pauseOriginRef.current,
+      audioEnded: false,
+    }),
+    [],
+  );
+
+  const applyInterruptionState = useCallback((state: InterruptionState) => {
+    wasPlayingRef.current = state.wasPlaying;
+    manuallyPausedRef.current = state.manuallyPaused;
+    externalInterruptionRef.current = state.externalInterruption;
+    pauseOriginRef.current = state.pauseOrigin;
+  }, []);
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
     navigator.userAgent,
   );
@@ -45,40 +72,48 @@ export const useAudioPlayer = (tracks: Track[]) => {
   const currentTrack = tracks[currentTrackIndex] || null;
 
   const attemptResumeAfterInterruption = useCallback(async () => {
-    if (!isMobile || !audioRef.current || !currentTrack) {
+    if (!audioRef.current || !currentTrack) {
       return;
     }
 
-    if (
-      !externalInterruptionRef.current ||
-      manuallyPausedRef.current ||
-      !hasUserInteractedRef.current
-    ) {
-      return;
-    }
+    const canResume = () =>
+      shouldAttemptResume({
+        isMobile,
+        externalInterruption: externalInterruptionRef.current,
+        manuallyPaused: manuallyPausedRef.current,
+        hasUserInteracted: hasUserInteractedRef.current,
+        isPageVisible: !document.hidden,
+        isAudioPaused: audioRef.current!.paused,
+        hasCurrentTrack: Boolean(currentTrack),
+      });
 
-    if (document.hidden || !audioRef.current.paused) {
-      return;
-    }
+    for (const delay of getResumeDelaysMs()) {
+      if (delay > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
 
-    console.log(
-      `📱 RESUME: Attempting to resume "${currentTrack.title}" after external interruption`,
-    );
+      if (!canResume()) {
+        return;
+      }
 
-    try {
-      await audioRef.current.play();
-      setIsPlaying(true);
-      wasPlayingRef.current = true;
-      manuallyPausedRef.current = false;
-      externalInterruptionRef.current = false;
-      console.log(`📱 RESUME: Playback restored for "${currentTrack.title}"`);
-    } catch (error) {
       console.log(
-        `📱 RESUME: Resume attempt failed, waiting for next visibility/focus event`,
-        error,
+        `📱 RESUME: Attempting to resume "${currentTrack.title}" after external interruption`,
       );
+
+      try {
+        await audioRef.current.play();
+        setIsPlaying(true);
+        applyInterruptionState(getSuccessfulResumeState(getInterruptionState()));
+        console.log(`📱 RESUME: Playback restored for "${currentTrack.title}"`);
+        return;
+      } catch (error) {
+        console.log(
+          `📱 RESUME: Resume attempt failed, waiting for next visibility/focus or tap`,
+          error,
+        );
+      }
     }
-  }, [currentTrack, isMobile]);
+  }, [applyInterruptionState, currentTrack, getInterruptionState, isMobile]);
 
   // Initialize audio element
   useEffect(() => {
@@ -121,30 +156,16 @@ export const useAudioPlayer = (tracks: Track[]) => {
     const handlePauseEvent = () => {
       setIsPlaying(false);
 
-      if (audio.ended) {
-        pauseOriginRef.current = "none";
-        return;
-      }
+      const nextState = handleAudioPause(getInterruptionState(), {
+        pauseOrigin: pauseOriginRef.current,
+        audioEnded: audio.ended,
+      });
 
-      if (pauseOriginRef.current === "manual") {
-        wasPlayingRef.current = false;
-        manuallyPausedRef.current = true;
-        externalInterruptionRef.current = false;
-        pauseOriginRef.current = "none";
-        return;
-      }
+      applyInterruptionState(nextState);
 
-      if (pauseOriginRef.current === "track-change" || pauseOriginRef.current === "cleanup") {
-        pauseOriginRef.current = "none";
-        return;
-      }
-
-      if (wasPlayingRef.current && !manuallyPausedRef.current) {
-        externalInterruptionRef.current = true;
+      if (nextState.externalInterruption) {
         console.log(`📱 INTERRUPTION: External audio interruption detected`);
       }
-
-      pauseOriginRef.current = "none";
     };
 
     const handleError = (e: Event) => {
@@ -172,31 +193,41 @@ export const useAudioPlayer = (tracks: Track[]) => {
       pauseOriginRef.current = "cleanup";
       audio.pause();
     };
-  }, []);
+  }, [applyInterruptionState, getInterruptionState]);
 
   useEffect(() => {
     if (!isMobile) {
       return;
     }
 
-    const handleVisibilityChange = () => {
+    const handleResumeSignal = () => {
       if (!document.hidden) {
         void attemptResumeAfterInterruption();
       }
     };
 
-    const handleWindowFocus = () => {
-      void attemptResumeAfterInterruption();
+    const handleUserGestureResume = () => {
+      if (externalInterruptionRef.current && !manuallyPausedRef.current) {
+        void attemptResumeAfterInterruption();
+      }
     };
 
-    window.addEventListener("focus", handleWindowFocus);
-    window.addEventListener("pageshow", handleWindowFocus);
+    const handleVisibilityChange = () => {
+      handleResumeSignal();
+    };
+
+    window.addEventListener("focus", handleResumeSignal);
+    window.addEventListener("pageshow", handleResumeSignal);
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener("touchstart", handleUserGestureResume, { passive: true });
+    document.addEventListener("pointerdown", handleUserGestureResume);
 
     return () => {
-      window.removeEventListener("focus", handleWindowFocus);
-      window.removeEventListener("pageshow", handleWindowFocus);
+      window.removeEventListener("focus", handleResumeSignal);
+      window.removeEventListener("pageshow", handleResumeSignal);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener("touchstart", handleUserGestureResume);
+      document.removeEventListener("pointerdown", handleUserGestureResume);
     };
   }, [attemptResumeAfterInterruption, isMobile]);
 
