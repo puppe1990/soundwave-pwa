@@ -13,7 +13,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "prepare": "husky",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate:icons": "node scripts/generate-icons.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,css,md}": [
