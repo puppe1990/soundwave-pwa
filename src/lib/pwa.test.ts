@@ -7,8 +7,8 @@ describe("pwa helpers", async () => {
     sessionStorage.clear();
   });
 
-  it("defines a unique start url under the app base path", () => {
-    expect(PWA_START_URL).toBe("/soundwave/?pwa=soundwave");
+  it("defines a unique start url for ios identity", () => {
+    expect(PWA_START_URL).toBe("/?pwa=soundwave");
   });
 
   it("detects ios user agents", () => {
@@ -38,10 +38,8 @@ describe("pwa helpers", async () => {
     expect(isStandalone()).toBe(true);
   });
 
-  it("only allows navigation inside the soundwave scope", () => {
-    expect(isWithinAppScope("/soundwave")).toBe(true);
-    expect(isWithinAppScope("/soundwave/")).toBe(true);
-    expect(isWithinAppScope("/")).toBe(false);
+  it("allows navigation at the app root", () => {
+    expect(isWithinAppScope("/")).toBe(true);
     expect(isWithinAppScope("/outro-app")).toBe(false);
   });
 });
