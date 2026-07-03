@@ -1,42 +1,12 @@
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
-const APP_BASE = "/soundwave/";
-const APP_BASE_PATH = "/soundwave";
-const PWA_START_URL = `${APP_BASE}?pwa=soundwave`;
-
-const redirectRootToAppBase = (): Plugin => ({
-  name: "redirect-root-to-app-base",
-  configureServer(server) {
-    server.middlewares.use((req, res, next) => {
-      if (req.url === "/" || req.url === "/index.html") {
-        res.statusCode = 302;
-        res.setHeader("Location", APP_BASE);
-        res.end();
-        return;
-      }
-
-      next();
-    });
-  },
-  configurePreviewServer(server) {
-    server.middlewares.use((req, res, next) => {
-      if (req.url === "/" || req.url === "/index.html") {
-        res.statusCode = 302;
-        res.setHeader("Location", APP_BASE);
-        res.end();
-        return;
-      }
-
-      next();
-    });
-  },
-});
-
-const icon = (size: string) => `${APP_BASE}icons/icon-${size}.png`;
+const APP_BASE = "/";
+const PWA_START_URL = "/?pwa=soundwave";
+const icon = (size: string) => `/icons/icon-${size}.png`;
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -45,17 +15,22 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     headers: {
-      "Service-Worker-Allowed": APP_BASE,
+      "Service-Worker-Allowed": "/",
     },
   },
   plugins: [
     react(),
-    redirectRootToAppBase(),
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
       filename: "soundwave-sw.js",
-      includeAssets: ["favicon.ico", "favicon-16x16.png", "favicon-32x32.png"],
+      includeAssets: [
+        "favicon.svg",
+        "favicon.ico",
+        "favicon-16x16.png",
+        "favicon-32x32.png",
+        "icon-source.svg",
+      ],
       manifest: {
         id: PWA_START_URL,
         name: "SoundWave PWA",
@@ -134,8 +109,8 @@ export default defineConfig(({ mode }) => ({
         clientsClaim: false,
         skipWaiting: true,
         navigateFallback: "index.html",
-        navigateFallbackAllowlist: [new RegExp(`^${APP_BASE_PATH}/?`)],
-        navigateFallbackDenylist: [new RegExp(`^${APP_BASE_PATH}/api/`)],
+        navigateFallbackAllowlist: [/^\/$/],
+        navigateFallbackDenylist: [/^\/api\//],
       },
       devOptions: {
         enabled: true,

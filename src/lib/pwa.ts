@@ -36,6 +36,10 @@ export const isWithinAppScope = (pathname: string): boolean => {
   const normalized = normalizePath(pathname);
   const base = normalizePath(APP_BASE_PATH);
 
+  if (!base) {
+    return normalized === "/" || normalized === "";
+  }
+
   return normalized === base || normalized.startsWith(`${base}/`);
 };
 

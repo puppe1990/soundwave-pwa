@@ -87,7 +87,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter
-          basename={APP_BASE_PATH}
+          basename={APP_BASE_PATH || undefined}
           future={{
             v7_startTransition: true,
             v7_relativeSplatPath: true,

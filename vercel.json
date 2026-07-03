@@ -1,20 +1,3 @@
 {
-  "redirects": [{ "source": "/", "destination": "/soundwave/", "permanent": false }],
-  "rewrites": [
-    { "source": "/soundwave/assets/:path*", "destination": "/assets/:path*" },
-    { "source": "/soundwave/icons/:path*", "destination": "/icons/:path*" },
-    { "source": "/soundwave/soundwave-sw.js", "destination": "/soundwave-sw.js" },
-    { "source": "/soundwave/workbox-:hash.js", "destination": "/workbox-:hash.js" },
-    { "source": "/soundwave/manifest.webmanifest", "destination": "/manifest.webmanifest" },
-    { "source": "/soundwave/registerSW.js", "destination": "/registerSW.js" },
-    { "source": "/soundwave/favicon.ico", "destination": "/favicon.ico" },
-    { "source": "/soundwave/favicon-16x16.png", "destination": "/favicon-16x16.png" },
-    { "source": "/soundwave/favicon-32x32.png", "destination": "/favicon-32x32.png" },
-    { "source": "/soundwave", "destination": "/index.html" },
-    { "source": "/soundwave/", "destination": "/index.html" },
-    {
-      "source": "/soundwave/((?!assets/|icons/|soundwave-sw.js|workbox-|manifest.webmanifest|registerSW.js|favicon).*)",
-      "destination": "/index.html"
-    }
-  ]
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
