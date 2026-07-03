@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
+import { APP_BASE_PATH } from "@/lib/app-config";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -86,6 +87,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter
+          basename={APP_BASE_PATH}
           future={{
             v7_startTransition: true,
             v7_relativeSplatPath: true,

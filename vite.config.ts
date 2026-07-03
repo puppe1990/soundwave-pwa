@@ -1,25 +1,63 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
+const APP_BASE = "/soundwave/";
+const APP_BASE_PATH = "/soundwave";
+const PWA_START_URL = `${APP_BASE}?pwa=soundwave`;
+
+const redirectRootToAppBase = (): Plugin => ({
+  name: "redirect-root-to-app-base",
+  configureServer(server) {
+    server.middlewares.use((req, res, next) => {
+      if (req.url === "/" || req.url === "/index.html") {
+        res.statusCode = 302;
+        res.setHeader("Location", APP_BASE);
+        res.end();
+        return;
+      }
+
+      next();
+    });
+  },
+  configurePreviewServer(server) {
+    server.middlewares.use((req, res, next) => {
+      if (req.url === "/" || req.url === "/index.html") {
+        res.statusCode = 302;
+        res.setHeader("Location", APP_BASE);
+        res.end();
+        return;
+      }
+
+      next();
+    });
+  },
+});
+
+const icon = (size: string) => `${APP_BASE}icons/icon-${size}.png`;
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: APP_BASE,
   server: {
     host: "::",
     port: 8080,
     headers: {
-      "Service-Worker-Allowed": "/",
+      "Service-Worker-Allowed": APP_BASE,
     },
   },
   plugins: [
     react(),
+    redirectRootToAppBase(),
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      filename: "soundwave-sw.js",
       includeAssets: ["favicon.ico", "favicon-16x16.png", "favicon-32x32.png"],
       manifest: {
+        id: PWA_START_URL,
         name: "SoundWave PWA",
         short_name: "SoundWave",
         description:
@@ -27,60 +65,61 @@ export default defineConfig(({ mode }) => ({
         theme_color: "#1a1a2e",
         background_color: "#1a1a2e",
         display: "standalone",
+        display_override: ["standalone", "minimal-ui"],
         orientation: "portrait",
-        scope: "/",
-        start_url: "/",
+        scope: APP_BASE,
+        start_url: PWA_START_URL,
         icons: [
           {
-            src: "/icons/icon-72x72.png",
+            src: icon("72x72"),
             sizes: "72x72",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "/icons/icon-96x96.png",
+            src: icon("96x96"),
             sizes: "96x96",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "/icons/icon-128x128.png",
+            src: icon("128x128"),
             sizes: "128x128",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "/icons/icon-144x144.png",
+            src: icon("144x144"),
             sizes: "144x144",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "/icons/icon-152x152.png",
+            src: icon("152x152"),
             sizes: "152x152",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "/icons/icon-192x192.png",
+            src: icon("192x192"),
             sizes: "192x192",
             type: "image/png",
             purpose: "any maskable",
           },
           {
-            src: "/icons/icon-384x384.png",
+            src: icon("384x384"),
             sizes: "384x384",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "/icons/icon-512x512.png",
+            src: icon("512x512"),
             sizes: "512x512",
             type: "image/png",
             purpose: "any maskable",
           },
           {
-            src: "/icons/icon-1024x1024.png",
+            src: icon("1024x1024"),
             sizes: "1024x1024",
             type: "image/png",
             purpose: "any",
@@ -92,6 +131,11 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        clientsClaim: false,
+        skipWaiting: true,
+        navigateFallback: "index.html",
+        navigateFallbackAllowlist: [new RegExp(`^${APP_BASE_PATH}/?`)],
+        navigateFallbackDenylist: [new RegExp(`^${APP_BASE_PATH}/api/`)],
       },
       devOptions: {
         enabled: true,
@@ -109,5 +153,8 @@ export default defineConfig(({ mode }) => ({
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    env: {
+      BASE_URL: APP_BASE,
+    },
   },
 }));

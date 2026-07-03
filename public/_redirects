@@ -1,0 +1,13 @@
+/ /soundwave/ 302
+/soundwave/assets/* /assets/:splat 200
+/soundwave/icons/* /icons/:splat 200
+/soundwave/soundwave-sw.js /soundwave-sw.js 200
+/soundwave/workbox-* /workbox-:splat 200
+/soundwave/manifest.webmanifest /manifest.webmanifest 200
+/soundwave/registerSW.js /registerSW.js 200
+/soundwave/favicon.ico /favicon.ico 200
+/soundwave/favicon-16x16.png /favicon-16x16.png 200
+/soundwave/favicon-32x32.png /favicon-32x32.png 200
+/soundwave /soundwave/ 200
+/soundwave/ /index.html 200
+/soundwave/* /index.html 200
