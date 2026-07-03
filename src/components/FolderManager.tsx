@@ -1,11 +1,23 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { FolderPlus, Folder as FolderIcon, Edit2, Trash2, MoreVertical } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useToast } from '@/hooks/use-toast';
-import { Folder } from '@/hooks/useLocalStorage';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { FolderPlus, Folder as FolderIcon, Edit2, Trash2, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
+import { Folder } from "@/hooks/useLocalStorage";
 
 interface FolderManagerProps {
   folders: Array<{ id: string; name: string; createdAt: number }>;
@@ -26,7 +38,7 @@ export const FolderManager = ({
 }: FolderManagerProps) => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderName, setNewFolderName] = useState("");
   const [editingFolder, setEditingFolder] = useState<{ id: string; name: string } | null>(null);
   const { toast } = useToast();
 
@@ -42,7 +54,7 @@ export const FolderManager = ({
 
     try {
       await onCreateFolder(newFolderName.trim());
-      setNewFolderName('');
+      setNewFolderName("");
       setIsCreateDialogOpen(false);
       toast({
         title: "Folder created",
@@ -62,7 +74,7 @@ export const FolderManager = ({
 
     try {
       await onRenameFolder(editingFolder.id, newFolderName.trim());
-      setNewFolderName('');
+      setNewFolderName("");
       setIsRenameDialogOpen(false);
       setEditingFolder(null);
       toast({
@@ -107,7 +119,7 @@ export const FolderManager = ({
           <FolderIcon className="h-5 w-5 text-primary" />
           <h3 className="font-medium text-foreground">Folders</h3>
         </div>
-        
+
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="h-8">
@@ -127,16 +139,14 @@ export const FolderManager = ({
                 placeholder="Enter folder name"
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
+                onKeyDown={(e) => e.key === "Enter" && handleCreateFolder()}
                 autoFocus
               />
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreateFolder}>
-                  Create Folder
-                </Button>
+                <Button onClick={handleCreateFolder}>Create Folder</Button>
               </div>
             </div>
           </DialogContent>
@@ -165,11 +175,15 @@ export const FolderManager = ({
               <FolderIcon className="h-4 w-4 mr-2" />
               {folder.name}
             </Button>
-            
-            {folder.id !== 'default' && (
+
+            {folder.id !== "default" && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 h-8 w-8 p-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="opacity-0 group-hover:opacity-100 h-8 w-8 p-0"
+                  >
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -178,7 +192,7 @@ export const FolderManager = ({
                     <Edit2 className="h-4 w-4 mr-2" />
                     Rename
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={() => handleDeleteFolder(folder.id, folder.name)}
                     className="text-destructive"
                   >
@@ -197,25 +211,21 @@ export const FolderManager = ({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rename Folder</DialogTitle>
-            <DialogDescription>
-              Enter a new name for this folder.
-            </DialogDescription>
+            <DialogDescription>Enter a new name for this folder.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <Input
               placeholder="Enter new folder name"
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleRenameFolder()}
+              onKeyDown={(e) => e.key === "Enter" && handleRenameFolder()}
               autoFocus
             />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsRenameDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleRenameFolder}>
-                Rename
-              </Button>
+              <Button onClick={handleRenameFolder}>Rename</Button>
             </div>
           </div>
         </DialogContent>

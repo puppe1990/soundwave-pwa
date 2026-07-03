@@ -1,20 +1,21 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { Palette, RotateCcw } from 'lucide-react';
-import { useGradientSettings } from '@/hooks/useGradientSettings';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Palette, RotateCcw } from "lucide-react";
+import { useGradientSettings } from "@/hooks/useGradientSettings";
 
 interface GradientPickerProps {
   onClose?: () => void;
 }
 
 export const GradientPicker = ({ onClose }: GradientPickerProps) => {
-  const { gradientSettings, updateGradientSettings, resetGradient, applyPreset, presets } = useGradientSettings();
+  const { gradientSettings, updateGradientSettings, resetGradient, applyPreset, presets } =
+    useGradientSettings();
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const handleColorChange = (colorType: 'primary' | 'secondary', color: string) => {
+  const handleColorChange = (colorType: "primary" | "secondary", color: string) => {
     updateGradientSettings({ [colorType]: color });
   };
 
@@ -41,7 +42,7 @@ export const GradientPicker = ({ onClose }: GradientPickerProps) => {
               onClick={() => setIsExpanded(!isExpanded)}
               className="text-xs"
             >
-              {isExpanded ? 'Simple' : 'Advanced'}
+              {isExpanded ? "Simple" : "Advanced"}
             </Button>
             <Button
               variant="ghost"
@@ -71,11 +72,11 @@ export const GradientPicker = ({ onClose }: GradientPickerProps) => {
           <Label className="text-sm font-medium text-foreground">Presets</Label>
           <div className="grid grid-cols-2 gap-2">
             {presets.map((preset) => {
-              const isActive = 
+              const isActive =
                 preset.primary === gradientSettings.primary &&
                 preset.secondary === gradientSettings.secondary &&
                 preset.direction === gradientSettings.direction;
-              
+
               return (
                 <Button
                   key={preset.name}
@@ -107,7 +108,7 @@ export const GradientPicker = ({ onClose }: GradientPickerProps) => {
                 <input
                   type="color"
                   value={gradientSettings.primary}
-                  onChange={(e) => handleColorChange('primary', e.target.value)}
+                  onChange={(e) => handleColorChange("primary", e.target.value)}
                   className="w-10 h-8 rounded border border-border/30 cursor-pointer"
                 />
                 <span className="text-xs text-muted-foreground font-mono">
@@ -123,7 +124,7 @@ export const GradientPicker = ({ onClose }: GradientPickerProps) => {
                 <input
                   type="color"
                   value={gradientSettings.secondary}
-                  onChange={(e) => handleColorChange('secondary', e.target.value)}
+                  onChange={(e) => handleColorChange("secondary", e.target.value)}
                   className="w-10 h-8 rounded border border-border/30 cursor-pointer"
                 />
                 <span className="text-xs text-muted-foreground font-mono">
@@ -159,11 +160,7 @@ export const GradientPicker = ({ onClose }: GradientPickerProps) => {
         {/* Close Button */}
         {onClose && (
           <div className="pt-2">
-            <Button
-              onClick={onClose}
-              className="w-full"
-              variant="outline"
-            >
+            <Button onClick={onClose} className="w-full" variant="outline">
               Done
             </Button>
           </div>

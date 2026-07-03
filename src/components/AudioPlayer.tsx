@@ -1,17 +1,22 @@
-import { useAudioPlayer, Track } from '@/hooks/useAudioPlayer';
-import { TrackInfo } from '@/components/TrackInfo';
-import { PlaybackControls } from '@/components/PlaybackControls';
-import { Playlist } from '@/components/Playlist';
-import { AudioUpload } from '@/components/AudioUpload';
-import { FolderManager } from '@/components/FolderManager';
-import { GradientPicker } from '@/components/GradientPicker';
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { List, Upload, Trash2, FolderOpen, Palette } from 'lucide-react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-
+import { useAudioPlayer, Track } from "@/hooks/useAudioPlayer";
+import { TrackInfo } from "@/components/TrackInfo";
+import { PlaybackControls } from "@/components/PlaybackControls";
+import { Playlist } from "@/components/Playlist";
+import { AudioUpload } from "@/components/AudioUpload";
+import { FolderManager } from "@/components/FolderManager";
+import { GradientPicker } from "@/components/GradientPicker";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { List, Upload, Trash2, FolderOpen, Palette } from "lucide-react";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 export const AudioPlayer = () => {
   const [showPlaylist, setShowPlaylist] = useState(false);
@@ -20,10 +25,10 @@ export const AudioPlayer = () => {
   const [showGradientPicker, setShowGradientPicker] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<string | undefined>();
   const [tracks, setTracks] = useState<Track[]>([]);
-  const { 
-    getTracks, 
+  const {
+    getTracks,
     getTracksByFolder,
-    clearAllTracks, 
+    clearAllTracks,
     removeTrack,
     storedTracks,
     folders,
@@ -32,7 +37,7 @@ export const AudioPlayer = () => {
     createFolder,
     renameFolder,
     deleteFolder,
-    moveTrackToFolder
+    moveTrackToFolder,
   } = useLocalStorage();
   const { toast } = useToast();
 
@@ -46,12 +51,12 @@ export const AudioPlayer = () => {
 
     const loadTracks = async () => {
       try {
-        console.log(`🎵 AudioPlayer: Loading tracks for folder: ${selectedFolder || 'All Tracks'}`);
+        console.log(`🎵 AudioPlayer: Loading tracks for folder: ${selectedFolder || "All Tracks"}`);
         const tracksToLoad = await getTracksByFolder(selectedFolder);
         setTracks(tracksToLoad);
         console.log(`🎵 AudioPlayer: Loaded ${tracksToLoad.length} tracks`);
       } catch (error) {
-        console.error('❌ AudioPlayer: Error loading tracks:', error);
+        console.error("❌ AudioPlayer: Error loading tracks:", error);
       }
     };
 
@@ -69,7 +74,7 @@ export const AudioPlayer = () => {
         description: "All uploaded tracks have been removed from local storage",
       });
     } catch (error) {
-      console.error('Error clearing stored tracks:', error);
+      console.error("Error clearing stored tracks:", error);
       toast({
         title: "Error",
         description: "Failed to clear stored tracks",
@@ -90,7 +95,7 @@ export const AudioPlayer = () => {
         description: "The track has been removed from your playlist.",
       });
     } catch (error) {
-      console.error('Error deleting track:', error);
+      console.error("Error deleting track:", error);
       toast({
         title: "Error",
         description: "Failed to delete track. Please try again.",
@@ -98,7 +103,7 @@ export const AudioPlayer = () => {
       });
     }
   };
-  
+
   const {
     currentTrack,
     currentTrackIndex,
@@ -118,20 +123,22 @@ export const AudioPlayer = () => {
   } = useAudioPlayer(tracks);
 
   const handleTracksUploaded = async (newTracks: Track[]) => {
-    console.log(`🎵 AudioPlayer: ${newTracks.length} tracks uploaded, reloading for folder: ${selectedFolder || 'All Tracks'}`);
-    
+    console.log(
+      `🎵 AudioPlayer: ${newTracks.length} tracks uploaded, reloading for folder: ${selectedFolder || "All Tracks"}`,
+    );
+
     // Force refresh from IndexedDB to bypass stale state
     const tracksToLoad = await getTracksByFolder(selectedFolder, true);
     setTracks(tracksToLoad);
     console.log(`🎵 AudioPlayer: Reloaded ${tracksToLoad.length} tracks after upload`);
-    
+
     setShowUpload(false);
     // Open playlist modal to show the newly uploaded tracks
     setShowPlaylist(true);
   };
 
   const handleFolderSelect = (folderName?: string) => {
-    console.log(`🎵 AudioPlayer: Folder selected: ${folderName || 'All Tracks'}`);
+    console.log(`🎵 AudioPlayer: Folder selected: ${folderName || "All Tracks"}`);
     setSelectedFolder(folderName);
     // Always open playlist modal when a folder is selected
     setShowPlaylist(true);
@@ -201,8 +208,8 @@ export const AudioPlayer = () => {
             <div className="relative p-8 pb-0">
               <div className="aspect-square max-w-80 mx-auto relative">
                 <img
-                  src={currentTrack?.cover || '/placeholder.svg'}
-                  alt={currentTrack ? `${currentTrack.album} cover` : 'Album cover'}
+                  src={currentTrack?.cover || "/placeholder.svg"}
+                  alt={currentTrack ? `${currentTrack.album} cover` : "Album cover"}
                   className="w-full h-full object-cover rounded-xl shadow-card"
                 />
                 {isLoading && (
@@ -216,14 +223,12 @@ export const AudioPlayer = () => {
             {/* Track Info */}
             <div className="px-8 py-4 text-center">
               <h2 className="text-2xl font-bold text-foreground mb-2">
-                {currentTrack?.title || 'Select a Track'}
+                {currentTrack?.title || "Select a Track"}
               </h2>
               <p className="text-lg text-muted-foreground mb-1">
-                {currentTrack?.artist || 'Unknown Artist'}
+                {currentTrack?.artist || "Unknown Artist"}
               </p>
-              <p className="text-muted-foreground">
-                {currentTrack?.album || 'Unknown Album'}
-              </p>
+              <p className="text-muted-foreground">{currentTrack?.album || "Unknown Album"}</p>
             </div>
 
             {/* Playback Controls */}
@@ -248,7 +253,8 @@ export const AudioPlayer = () => {
               <DialogHeader>
                 <DialogTitle>Upload Audio Files</DialogTitle>
                 <DialogDescription>
-                  Select audio files to add to your music library. Supported formats include MP3, WAV, and other audio files.
+                  Select audio files to add to your music library. Supported formats include MP3,
+                  WAV, and other audio files.
                 </DialogDescription>
               </DialogHeader>
               <AudioUpload onTracksUploaded={handleTracksUploaded} />
