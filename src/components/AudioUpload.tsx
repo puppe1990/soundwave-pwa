@@ -1,11 +1,11 @@
-import { useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Upload, Music, FileAudio } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useAudioUpload } from '@/hooks/useAudioUpload';
-import { Track } from '@/hooks/useAudioPlayer';
-import { useLocalStorage, StoredTrack } from '@/hooks/useLocalStorage';
-import { FolderSelector } from '@/components/FolderSelector';
+import { useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Upload, Music, FileAudio } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAudioUpload } from "@/hooks/useAudioUpload";
+import { Track } from "@/hooks/useAudioPlayer";
+import { useLocalStorage, StoredTrack } from "@/hooks/useLocalStorage";
+import { FolderSelector } from "@/components/FolderSelector";
 
 interface AudioUploadProps {
   onTracksUploaded: (tracks: Track[]) => void;
@@ -26,41 +26,47 @@ export const AudioUpload = ({ onTracksUploaded }: AudioUploadProps) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    console.log(`📤 AudioUpload: Starting upload of ${files.length} files to folder: ${selectedFolder || 'All Tracks'}`);
+    console.log(
+      `📤 AudioUpload: Starting upload of ${files.length} files to folder: ${selectedFolder || "All Tracks"}`,
+    );
 
     try {
       toast({
         title: "Uploading audio files",
-        description: `Processing ${files.length} file${files.length > 1 ? 's' : ''}...`,
+        description: `Processing ${files.length} file${files.length > 1 ? "s" : ""}...`,
       });
 
       const storedTracks = await uploadAudio(files);
-      console.log(`📤 AudioUpload: Processed ${storedTracks.length} tracks from ${files.length} files`);
-      
+      console.log(
+        `📤 AudioUpload: Processed ${storedTracks.length} tracks from ${files.length} files`,
+      );
+
       if (storedTracks.length > 0) {
         // Add folder information to tracks
-        const tracksWithFolder = storedTracks.map(track => ({
+        const tracksWithFolder = storedTracks.map((track) => ({
           ...track,
-          folder: selectedFolder || undefined // Explicitly set undefined if no folder selected
+          folder: selectedFolder || undefined, // Explicitly set undefined if no folder selected
         }));
-        console.log(`📤 AudioUpload: Assigning folder "${selectedFolder || 'undefined'}" to tracks`);
-        console.log(`📤 AudioUpload: Adding tracks to folder: ${selectedFolder || 'All Tracks'}`);
-        
+        console.log(
+          `📤 AudioUpload: Assigning folder "${selectedFolder || "undefined"}" to tracks`,
+        );
+        console.log(`📤 AudioUpload: Adding tracks to folder: ${selectedFolder || "All Tracks"}`);
+
         // Save to IndexedDB
         await addTracks(tracksWithFolder);
-        
+
         // Convert to Track objects for the player (convertToTrack is async)
-        const trackPromises = tracksWithFolder.map(track => convertToTrack(track));
+        const trackPromises = tracksWithFolder.map((track) => convertToTrack(track));
         const tracks = await Promise.all(trackPromises);
         onTracksUploaded(tracks);
-        
+
         console.log(`📤 AudioUpload: Successfully uploaded ${storedTracks.length} tracks`);
         toast({
           title: "Upload successful",
-          description: `Added ${storedTracks.length} track${storedTracks.length > 1 ? 's' : ''} to your playlist and saved locally`,
+          description: `Added ${storedTracks.length} track${storedTracks.length > 1 ? "s" : ""} to your playlist and saved locally`,
         });
       } else {
-        console.log('📤 AudioUpload: No valid audio files found');
+        console.log("📤 AudioUpload: No valid audio files found");
         toast({
           title: "No valid audio files",
           description: "Please select valid audio files (MP3, WAV, OGG, M4A, AAC, FLAC)",
@@ -68,23 +74,26 @@ export const AudioUpload = ({ onTracksUploaded }: AudioUploadProps) => {
         });
       }
     } catch (error) {
-      console.error('❌ AudioUpload: Upload error:', error);
-      
+      console.error("❌ AudioUpload: Upload error:", error);
+
       // Check if it's a storage quota error
       const storageInfo = getStorageInfo();
-      const isQuotaError = error instanceof Error && error.message.includes('quota');
-      
+      const isQuotaError = error instanceof Error && error.message.includes("quota");
+
       toast({
         title: "Upload failed",
-        description: isQuotaError 
-          ? error.message || "Storage quota exceeded. Please try uploading fewer files or clear some existing tracks."
+        description: isQuotaError
+          ? error.message ||
+            "Storage quota exceeded. Please try uploading fewer files or clear some existing tracks."
           : "There was an error uploading your audio files",
         variant: "destructive",
       });
-      
+
       // Show storage info if quota error
       if (isQuotaError && storageInfo) {
-        console.log(`📊 Storage usage: ${Math.round(storageInfo.usagePercentage)}% (${Math.round(storageInfo.totalSize / 1024)}KB)`);
+        console.log(
+          `📊 Storage usage: ${Math.round(storageInfo.usagePercentage)}% (${Math.round(storageInfo.totalSize / 1024)}KB)`,
+        );
         toast({
           title: "Storage Usage",
           description: `Using ${Math.round(storageInfo.usagePercentage)}% of available storage (${Math.round(storageInfo.totalSize / 1024)}KB)`,
@@ -95,7 +104,7 @@ export const AudioUpload = ({ onTracksUploaded }: AudioUploadProps) => {
 
     // Reset file input
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 

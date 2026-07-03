@@ -1,8 +1,8 @@
-import { Track } from '@/hooks/useAudioPlayer';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Play, Music, ChevronDown, ChevronRight, Folder, Trash2 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { Track } from "@/hooks/useAudioPlayer";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Play, Music, ChevronDown, ChevronRight, Folder, Trash2 } from "lucide-react";
+import { useState, useMemo } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 
 interface PlaylistProps {
   tracks: Track[];
@@ -28,22 +28,30 @@ interface PlaylistProps {
 const formatDuration = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
-export const Playlist = ({ tracks, currentTrackIndex, onSelectTrack, isPlaying, showFolders = true, onDeleteTrack, onClearAll }: PlaylistProps) => {
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['All Tracks']));
+export const Playlist = ({
+  tracks,
+  currentTrackIndex,
+  onSelectTrack,
+  isPlaying,
+  showFolders = true,
+  onDeleteTrack,
+  onClearAll,
+}: PlaylistProps) => {
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(["All Tracks"]));
 
   // Group tracks by folder
   const groupedTracks = useMemo(() => {
     if (!showFolders) {
-      return { 'All Tracks': tracks };
+      return { "All Tracks": tracks };
     }
 
     const groups: Record<string, Track[]> = {};
-    
+
     tracks.forEach((track, index) => {
-      const folderName = track.folder || 'All Tracks';
+      const folderName = track.folder || "All Tracks";
       if (!groups[folderName]) {
         groups[folderName] = [];
       }
@@ -66,14 +74,12 @@ export const Playlist = ({ tracks, currentTrackIndex, onSelectTrack, isPlaying, 
   const renderTrack = (track: Track & { originalIndex?: number }, index: number) => {
     const actualIndex = track.originalIndex ?? index;
     const isCurrentTrack = actualIndex === currentTrackIndex;
-    
+
     return (
       <div
         key={track.id}
         className={`group flex items-center gap-4 w-full p-4 rounded-lg transition-smooth hover:bg-secondary/50 ${
-          isCurrentTrack 
-            ? 'bg-primary/10 border border-primary/20 hover:bg-primary/15' 
-            : ''
+          isCurrentTrack ? "bg-primary/10 border border-primary/20 hover:bg-primary/15" : ""
         }`}
       >
         <Button
@@ -96,21 +102,25 @@ export const Playlist = ({ tracks, currentTrackIndex, onSelectTrack, isPlaying, 
             </div>
 
             <div className="flex-1 text-left min-w-0">
-              <h4 className={`font-medium truncate ${
-                isCurrentTrack ? 'text-primary' : 'text-foreground'
-              }`}>
+              <h4
+                className={`font-medium truncate ${
+                  isCurrentTrack ? "text-primary" : "text-foreground"
+                }`}
+              >
                 {track.title}
               </h4>
-              <p className={`text-sm truncate ${
-                isCurrentTrack ? 'text-primary/70' : 'text-muted-foreground'
-              }`}>
+              <p
+                className={`text-sm truncate ${
+                  isCurrentTrack ? "text-primary/70" : "text-muted-foreground"
+                }`}
+              >
                 {track.artist}
               </p>
             </div>
 
-            <div className={`text-sm ${
-              isCurrentTrack ? 'text-primary/70' : 'text-muted-foreground'
-            }`}>
+            <div
+              className={`text-sm ${isCurrentTrack ? "text-primary/70" : "text-muted-foreground"}`}
+            >
               {formatDuration(track.duration)}
             </div>
           </div>
@@ -131,7 +141,8 @@ export const Playlist = ({ tracks, currentTrackIndex, onSelectTrack, isPlaying, 
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Track</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete "{track.title}" by {track.artist}? This action cannot be undone.
+                  Are you sure you want to delete "{track.title}" by {track.artist}? This action
+                  cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -175,7 +186,8 @@ export const Playlist = ({ tracks, currentTrackIndex, onSelectTrack, isPlaying, 
               <AlertDialogHeader>
                 <AlertDialogTitle>Clear All Tracks</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete all {tracks.length} track{tracks.length !== 1 ? 's' : ''}? This action cannot be undone.
+                  Are you sure you want to delete all {tracks.length} track
+                  {tracks.length !== 1 ? "s" : ""}? This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -196,7 +208,7 @@ export const Playlist = ({ tracks, currentTrackIndex, onSelectTrack, isPlaying, 
         <div className="space-y-2">
           {Object.entries(groupedTracks).map(([folderName, folderTracks]) => {
             const isExpanded = expandedFolders.has(folderName);
-            
+
             return (
               <div key={folderName}>
                 {showFolders && Object.keys(groupedTracks).length > 1 && (
@@ -217,7 +229,7 @@ export const Playlist = ({ tracks, currentTrackIndex, onSelectTrack, isPlaying, 
                     </span>
                   </Button>
                 )}
-                
+
                 {isExpanded && (
                   <div className="ml-4 space-y-1">
                     {folderTracks.map((track, index) => renderTrack(track, index))}

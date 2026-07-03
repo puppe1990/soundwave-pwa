@@ -7,6 +7,7 @@ A modern, responsive Progressive Web App (PWA) audio player built with React, Ty
 ## ✨ Features
 
 ### 🎧 Core Audio Features
+
 - **High-quality audio playback** with custom controls
 - **Playlist management** with drag-and-drop support
 - **Audio file upload** (MP3, WAV, OGG, M4A)
@@ -15,6 +16,7 @@ A modern, responsive Progressive Web App (PWA) audio player built with React, Ty
 - **Shuffle and repeat modes**
 
 ### 📱 Progressive Web App
+
 - **Offline functionality** with service worker caching
 - **Installable** on mobile and desktop devices
 - **Responsive design** optimized for all screen sizes
@@ -22,6 +24,7 @@ A modern, responsive Progressive Web App (PWA) audio player built with React, Ty
 - **Native app-like experience** with standalone display mode
 
 ### 🎨 Modern UI/UX
+
 - **Beautiful gradient design** with glassmorphism effects
 - **Dark theme** optimized for music listening
 - **Smooth animations** and transitions
@@ -29,6 +32,7 @@ A modern, responsive Progressive Web App (PWA) audio player built with React, Ty
 - **Accessible** with keyboard navigation support
 
 ### 🔧 Developer Features
+
 - **TypeScript** for type safety
 - **Component-based architecture** with React hooks
 - **Modern build tools** with Vite
@@ -38,18 +42,21 @@ A modern, responsive Progressive Web App (PWA) audio player built with React, Ty
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Node.js 18+ and npm/yarn
 - Modern web browser with PWA support
 
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/yourusername/soundwave-pwa.git
    cd soundwave-pwa
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    # or
@@ -57,6 +64,7 @@ A modern, responsive Progressive Web App (PWA) audio player built with React, Ty
    ```
 
 3. **Start the development server**
+
    ```bash
    npm run dev
    # or
@@ -76,11 +84,13 @@ npm run preview
 ## 📱 PWA Installation
 
 ### Mobile (iOS/Android)
+
 1. Open the app in your mobile browser
 2. Tap the "Add to Home Screen" prompt
 3. The app will be installed as a native-like experience
 
 ### Desktop (Chrome/Edge)
+
 1. Open the app in your browser
 2. Click the install icon in the address bar
 3. The app will be added to your applications
@@ -88,12 +98,14 @@ npm run preview
 ## 🛠️ Tech Stack
 
 ### Frontend
+
 - **React 18.3.1** - UI library with hooks
 - **TypeScript 5.8.3** - Type-safe JavaScript
 - **Vite 5.4.19** - Fast build tool and dev server
 - **React Router 6.30.1** - Client-side routing
 
 ### Styling & UI
+
 - **Tailwind CSS 3.4.17** - Utility-first CSS framework
 - **shadcn/ui** - Beautiful, accessible component library
 - **Radix UI** - Headless UI primitives
@@ -101,11 +113,13 @@ npm run preview
 - **Tailwind Animate** - Animation utilities
 
 ### PWA & Performance
+
 - **Vite PWA Plugin** - PWA configuration and service worker
 - **Workbox** - Service worker and caching strategies
 - **Sharp** - Image optimization
 
 ### Development Tools
+
 - **ESLint** - Code linting and formatting
 - **TypeScript ESLint** - TypeScript-specific linting rules
 - **PostCSS** - CSS processing
@@ -146,6 +160,7 @@ soundwave-pwa/
 ## 🎵 Usage
 
 ### Basic Audio Playback
+
 1. **Upload audio files** using the upload button
 2. **Select tracks** from the playlist
 3. **Control playback** with the media controls
@@ -153,12 +168,14 @@ soundwave-pwa/
 5. **Seek through tracks** by clicking the progress bar
 
 ### Playlist Management
+
 - **Add tracks** by uploading audio files
 - **Reorder tracks** by dragging in the playlist
 - **Remove tracks** with the delete button
 - **View track details** including duration and metadata
 
 ### PWA Features
+
 - **Install the app** for offline access
 - **Use in standalone mode** without browser UI
 - **Automatic updates** when new versions are available
@@ -166,20 +183,26 @@ soundwave-pwa/
 ## 🔧 Configuration
 
 ### PWA Settings
+
 Edit `vite.config.ts` to customize PWA behavior:
+
 - App name and description
 - Theme colors
 - Icon sizes and purposes
 - Caching strategies
 
 ### Audio Settings
+
 Modify `src/hooks/useAudioPlayer.ts` for:
+
 - Default volume levels
 - Audio format support
 - Playback behavior
 
 ### Styling
+
 Update `tailwind.config.ts` for:
+
 - Custom color schemes
 - Animation settings
 - Responsive breakpoints
@@ -187,16 +210,19 @@ Update `tailwind.config.ts` for:
 ## 🚀 Deployment
 
 ### Vercel (Recommended)
+
 1. Connect your GitHub repository to Vercel
 2. Deploy automatically on every push
 3. Enjoy global CDN and automatic HTTPS
 
 ### Netlify
+
 1. Build the project: `npm run build`
 2. Deploy the `dist` folder to Netlify
 3. Configure redirects for SPA routing
 
 ### GitHub Pages
+
 1. Build the project: `npm run build`
 2. Push the `dist` folder to a `gh-pages` branch
 3. Enable GitHub Pages in repository settings
@@ -212,6 +238,7 @@ We welcome contributions! Please follow these steps:
 5. **Open a Pull Request**
 
 ### Development Guidelines
+
 - Follow TypeScript best practices
 - Use meaningful commit messages
 - Test on multiple devices and browsers

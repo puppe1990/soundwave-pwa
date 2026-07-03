@@ -48,18 +48,22 @@
     --player-accent-glow: 262 83% 70%;
     --audio-progress: 262 83% 58%;
     --audio-progress-bg: 222 47% 12%;
-    
+
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%), hsl(282 83% 48%));
     --gradient-player: linear-gradient(145deg, hsl(222 47% 4%) 0%, hsl(222 47% 6%) 100%);
     --gradient-card: linear-gradient(145deg, hsl(222 47% 6%) 0%, hsl(222 47% 8%) 100%);
-    --gradient-glass: linear-gradient(145deg, hsl(222 47% 8% / 0.8) 0%, hsl(222 47% 12% / 0.6) 100%);
-    
+    --gradient-glass: linear-gradient(
+      145deg,
+      hsl(222 47% 8% / 0.8) 0%,
+      hsl(222 47% 12% / 0.6) 100%
+    );
+
     /* Shadows and Effects */
     --shadow-player: 0 25px 50px -12px hsl(222 47% 2% / 0.8);
     --shadow-glow: 0 0 30px hsl(262 83% 58% / 0.3);
     --shadow-card: 0 10px 25px -5px hsl(222 47% 2% / 0.4);
-    
+
     /* Animation */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);

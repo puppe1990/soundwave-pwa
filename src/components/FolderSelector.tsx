@@ -1,11 +1,23 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Folder as FolderIcon, FolderPlus } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { Folder } from '@/hooks/useLocalStorage';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Folder as FolderIcon, FolderPlus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { Folder } from "@/hooks/useLocalStorage";
 
 interface FolderSelectorProps {
   folders: Array<{ id: string; name: string; createdAt: number }>;
@@ -21,7 +33,7 @@ export const FolderSelector = ({
   onCreateFolder,
 }: FolderSelectorProps) => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderName, setNewFolderName] = useState("");
   const { toast } = useToast();
 
   const handleCreateFolder = async () => {
@@ -36,7 +48,7 @@ export const FolderSelector = ({
 
     try {
       await onCreateFolder(newFolderName.trim());
-      setNewFolderName('');
+      setNewFolderName("");
       setIsCreateDialogOpen(false);
       onFolderChange(newFolderName.trim());
       toast({
@@ -56,7 +68,10 @@ export const FolderSelector = ({
     <div className="space-y-2">
       <label className="text-sm font-medium text-foreground">Select Folder</label>
       <div className="flex gap-2">
-        <Select value={selectedFolder || 'all'} onValueChange={(value) => onFolderChange(value === 'all' ? undefined : value)}>
+        <Select
+          value={selectedFolder || "all"}
+          onValueChange={(value) => onFolderChange(value === "all" ? undefined : value)}
+        >
           <SelectTrigger className="flex-1">
             <SelectValue placeholder="Select a folder" />
           </SelectTrigger>
@@ -77,7 +92,7 @@ export const FolderSelector = ({
             ))}
           </SelectContent>
         </Select>
-        
+
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="px-3">
@@ -93,16 +108,14 @@ export const FolderSelector = ({
                 placeholder="Enter folder name"
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
+                onKeyDown={(e) => e.key === "Enter" && handleCreateFolder()}
                 autoFocus
               />
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreateFolder}>
-                  Create Folder
-                </Button>
+                <Button onClick={handleCreateFolder}>Create Folder</Button>
               </div>
             </div>
           </DialogContent>

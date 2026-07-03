@@ -1,6 +1,15 @@
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Repeat, Repeat1 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  VolumeX,
+  Repeat,
+  Repeat1,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 
 interface PlaybackControlsProps {
   isPlaying: boolean;
@@ -12,14 +21,14 @@ interface PlaybackControlsProps {
   currentTime: number;
   duration: number;
   onSeek: (time: number) => void;
-  repeatMode: 'none' | 'one' | 'all';
+  repeatMode: "none" | "one" | "all";
   onToggleRepeat: () => void;
 }
 
 const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
 export const PlaybackControls = ({
@@ -82,11 +91,7 @@ export const PlaybackControls = ({
           onClick={onTogglePlay}
           className="h-16 w-16 rounded-full bg-gradient-primary hover:shadow-glow transition-smooth hover:scale-105 active:scale-95"
         >
-          {isPlaying ? (
-            <Pause className="h-8 w-8" />
-          ) : (
-            <Play className="h-8 w-8 ml-1" />
-          )}
+          {isPlaying ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8 ml-1" />}
         </Button>
 
         <Button
@@ -106,21 +111,25 @@ export const PlaybackControls = ({
           size="icon"
           onClick={onToggleRepeat}
           className={`h-10 w-10 rounded-full transition-all duration-300 hover:scale-105 ${
-            repeatMode === 'none' 
-              ? 'text-muted-foreground hover:text-foreground hover:bg-secondary/50' 
-              : repeatMode === 'one'
-              ? 'text-primary bg-primary/10 hover:bg-primary/20 shadow-lg shadow-primary/20'
-              : 'text-primary bg-primary/10 hover:bg-primary/20 shadow-lg shadow-primary/20'
+            repeatMode === "none"
+              ? "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+              : repeatMode === "one"
+                ? "text-primary bg-primary/10 hover:bg-primary/20 shadow-lg shadow-primary/20"
+                : "text-primary bg-primary/10 hover:bg-primary/20 shadow-lg shadow-primary/20"
           }`}
-          title={`Repeat: ${repeatMode === 'none' ? 'Off' : repeatMode === 'one' ? 'One' : 'All'}`}
+          title={`Repeat: ${repeatMode === "none" ? "Off" : repeatMode === "one" ? "One" : "All"}`}
         >
           <div className="relative">
-            {repeatMode === 'one' ? (
-              <Repeat1 className={`h-5 w-5 transition-all duration-300 ${repeatMode === 'one' ? 'animate-pulse' : ''}`} />
+            {repeatMode === "one" ? (
+              <Repeat1
+                className={`h-5 w-5 transition-all duration-300 ${repeatMode === "one" ? "animate-pulse" : ""}`}
+              />
             ) : (
-              <Repeat className={`h-5 w-5 transition-all duration-300 ${repeatMode === 'all' ? 'animate-spin-slow' : ''}`} />
+              <Repeat
+                className={`h-5 w-5 transition-all duration-300 ${repeatMode === "all" ? "animate-spin-slow" : ""}`}
+              />
             )}
-            {repeatMode !== 'none' && (
+            {repeatMode !== "none" && (
               <div className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full animate-ping" />
             )}
           </div>
@@ -135,11 +144,7 @@ export const PlaybackControls = ({
           onClick={() => onVolumeChange(volume > 0 ? 0 : 1)}
           className="h-8 w-8 rounded-full hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-smooth"
         >
-          {volume === 0 ? (
-            <VolumeX className="h-4 w-4" />
-          ) : (
-            <Volume2 className="h-4 w-4" />
-          )}
+          {volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
         </Button>
         <Slider
           value={[volume * 100]}

@@ -1,4 +1,4 @@
-import { Track } from '@/hooks/useAudioPlayer';
+import { Track } from "@/hooks/useAudioPlayer";
 
 interface TrackInfoProps {
   track: Track | null;
@@ -33,15 +33,9 @@ export const TrackInfo = ({ track, isLoading }: TrackInfoProps) => {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-foreground truncate text-lg">
-          {track.title}
-        </h3>
-        <p className="text-muted-foreground truncate">
-          {track.artist}
-        </p>
-        <p className="text-muted-foreground text-sm truncate">
-          {track.album}
-        </p>
+        <h3 className="font-semibold text-foreground truncate text-lg">{track.title}</h3>
+        <p className="text-muted-foreground truncate">{track.artist}</p>
+        <p className="text-muted-foreground text-sm truncate">{track.album}</p>
       </div>
     </div>
   );
