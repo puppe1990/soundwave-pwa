@@ -3,6 +3,8 @@
  * Pure values so unit tests can lock offline-first shell behavior.
  */
 
+import { registerSW } from "virtual:pwa-register";
+
 export const OFFLINE_PRECACHE_GLOB_PATTERNS = [
   "**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff,woff2}",
 ] as const;
@@ -33,5 +35,9 @@ export const getNavigateFallbackAllowlist = (appBase: string): RegExp[] => {
  * Safe no-op when registration is unavailable (e.g. non-secure context).
  */
 export const registerOfflineServiceWorker = (): void => {
-  // Implementation filled in Task 2 (virtual:pwa-register).
+  try {
+    registerSW({ immediate: true });
+  } catch (error) {
+    console.warn("⚠️ PWA: service worker registration skipped", error);
+  }
 };
