@@ -58,12 +58,17 @@ describe("registerOfflineServiceWorker", () => {
     vi.clearAllMocks();
   });
 
-  it("registers the service worker with immediate: true", async () => {
+  it("registers the service worker with immediate: true and onRegisterError", async () => {
     const { registerSW } = await import("virtual:pwa-register");
     const { registerOfflineServiceWorker } = await import("./offline-shell");
 
     registerOfflineServiceWorker();
 
-    expect(registerSW).toHaveBeenCalledWith({ immediate: true });
+    expect(registerSW).toHaveBeenCalledWith(
+      expect.objectContaining({
+        immediate: true,
+        onRegisterError: expect.any(Function),
+      }),
+    );
   });
 });
