@@ -41,6 +41,7 @@ export default defineConfig(({ mode }) => ({
         "apple-touch-icon.png",
         "apple-touch-icon-152x152.png",
         "apple-touch-icon-167x167.png",
+        "manifest.json",
       ],
       manifest: {
         id: PWA_START_URL,
