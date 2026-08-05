@@ -34,18 +34,21 @@ Dense, imperative rules. Source: Clean Code for AI Agents (Akita / Uncle Bob re-
 
 ## Domain map (where things live)
 
-| Concern                                 | Path                                                                     |
-| --------------------------------------- | ------------------------------------------------------------------------ |
-| App base / paths                        | `src/lib/app-config.ts`                                                  |
-| PWA isolation (iOS/standalone scope)    | `src/lib/pwa.ts`                                                         |
-| Offline shell Workbox knobs (Node-safe) | `src/lib/offline-shell-config.ts`                                        |
-| SW registration (browser)               | `src/lib/offline-shell.ts`                                               |
-| IndexedDB tracks/folders/blobs          | `src/lib/indexedDB.ts`                                                   |
-| Library load/save / blob→URL            | `src/hooks/useLocalStorage.ts`                                           |
-| Playback + mobile interruption          | `src/hooks/useAudioPlayer.ts`, `src/lib/audio-interruption.ts`           |
-| Upload pipeline                         | `src/hooks/useAudioUpload.ts`                                            |
-| UI shell                                | `src/components/AudioPlayer.tsx`                                         |
-| Vite + PWA plugin                       | `vite.config.ts` (import Workbox knobs only from `offline-shell-config`) |
+| Concern                                 | Path                                                                       |
+| --------------------------------------- | -------------------------------------------------------------------------- |
+| App base / paths                        | `src/lib/app-config.ts`                                                    |
+| PWA isolation (iOS/standalone scope)    | `src/lib/pwa.ts`                                                           |
+| Offline shell Workbox knobs (Node-safe) | `src/lib/offline-shell-config.ts`                                          |
+| SW registration (browser)               | `src/lib/offline-shell.ts`                                                 |
+| IndexedDB tracks/folders/blobs          | `src/lib/indexedDB.ts`                                                     |
+| Library load/save / blob→URL            | `src/hooks/useLocalStorage.ts`                                             |
+| Playback orchestrator                   | `src/hooks/useAudioPlayer.ts`                                              |
+| Element lifecycle                       | `src/hooks/useAudioElement.ts`                                             |
+| Mobile interruption resume              | `src/hooks/useAudioInterruptionResume.ts`, `src/lib/audio-interruption.ts` |
+| Pure playback helpers / types           | `src/lib/audio-playback-helpers.ts`, `src/lib/audio-player-types.ts`       |
+| Upload pipeline                         | `src/hooks/useAudioUpload.ts`                                              |
+| UI shell                                | `src/components/AudioPlayer.tsx`                                           |
+| Vite + PWA plugin                       | `vite.config.ts` (import Workbox knobs only from `offline-shell-config`)   |
 
 ## Architecture constraints
 
@@ -77,10 +80,10 @@ Dense, imperative rules. Source: Clean Code for AI Agents (Akita / Uncle Bob re-
 - Prefer structured context in console for agents (`console.warn("…", { trackId, error })`).
 - Emoji-prefixed logs exist in this codebase; keep consistent when touching a file, don't mass-rewrite.
 
-## Known size debt (split when touching)
+## Known size debt
 
-- `src/hooks/useAudioPlayer.ts` (~746 lines) — over hard cap; split by interruption vs core playback when changing it.
 - `src/components/ui/sidebar.tsx` — shadcn; leave unless required.
+- Keep `useAudioPlayer.ts` as thin orchestrator; put new interruption logic in `useAudioInterruptionResume` / `audio-interruption.ts`.
 
 ## Defensive programming (this product)
 
