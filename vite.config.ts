@@ -3,6 +3,14 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
+import {
+  OFFLINE_NAVIGATE_FALLBACK,
+  OFFLINE_NAVIGATE_FALLBACK_DENYLIST,
+  OFFLINE_PRECACHE_GLOB_PATTERNS,
+  OFFLINE_WORKBOX_CLIENTS_CLAIM,
+  OFFLINE_WORKBOX_SKIP_WAITING,
+  getNavigateFallbackAllowlist,
+} from "./src/lib/offline-shell-config";
 
 const APP_BASE = "/";
 const PWA_START_URL = "/?pwa=soundwave";
@@ -23,6 +31,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      injectRegister: false, // app registers via registerOfflineServiceWorker()
       filename: "soundwave-sw.js",
       includeAssets: [
         "favicon.svg",
@@ -33,6 +42,7 @@ export default defineConfig(({ mode }) => ({
         "apple-touch-icon.png",
         "apple-touch-icon-152x152.png",
         "apple-touch-icon-167x167.png",
+        "manifest.json",
       ],
       manifest: {
         id: PWA_START_URL,
@@ -114,12 +124,12 @@ export default defineConfig(({ mode }) => ({
         dir: "ltr",
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        clientsClaim: false,
-        skipWaiting: true,
-        navigateFallback: "index.html",
-        navigateFallbackAllowlist: [/^\/$/],
-        navigateFallbackDenylist: [/^\/api\//],
+        globPatterns: [...OFFLINE_PRECACHE_GLOB_PATTERNS],
+        clientsClaim: OFFLINE_WORKBOX_CLIENTS_CLAIM,
+        skipWaiting: OFFLINE_WORKBOX_SKIP_WAITING,
+        navigateFallback: OFFLINE_NAVIGATE_FALLBACK,
+        navigateFallbackAllowlist: getNavigateFallbackAllowlist(APP_BASE),
+        navigateFallbackDenylist: [...OFFLINE_NAVIGATE_FALLBACK_DENYLIST],
       },
       devOptions: {
         enabled: true,
