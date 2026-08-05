@@ -1,6 +1,12 @@
 /**
- * Offline app-shell settings for Workbox / vite-plugin-pwa.
- * Pure values (no virtual imports) so vite.config can import them safely.
+ * Offline app-shell Workbox settings (Node-safe).
+ *
+ * WHY split from offline-shell.ts: vite.config must not import
+ * virtual:pwa-register. Keep pure constants here for Vite + unit tests.
+ *
+ * @example
+ * import { OFFLINE_PRECACHE_GLOB_PATTERNS } from "./offline-shell-config";
+ * // vite.config workbox.globPatterns: [...OFFLINE_PRECACHE_GLOB_PATTERNS]
  */
 
 export const OFFLINE_PRECACHE_GLOB_PATTERNS = [
@@ -11,16 +17,33 @@ export const OFFLINE_WORKBOX_CLIENTS_CLAIM = true;
 export const OFFLINE_WORKBOX_SKIP_WAITING = true;
 export const OFFLINE_NAVIGATE_FALLBACK = "index.html";
 
+/** Paths that must never fall back to the SPA shell (e.g. future APIs). */
+export const OFFLINE_NAVIGATE_FALLBACK_DENYLIST: RegExp[] = [/^\/api\//];
+
 /**
- * Build navigateFallbackAllowlist for the Vite `base` path.
- * Ensures SPA deep links resolve to index.html offline.
+ * Normalize Vite `base` for allowlist building.
+ * Root "/" becomes empty so SPA routes match the whole origin path space.
+ */
+export const normalizeViteAppBase = (appBase: string): string => {
+  if (!appBase || appBase === "/") {
+    return "";
+  }
+
+  return appBase.endsWith("/") ? appBase.slice(0, -1) : appBase;
+};
+
+/**
+ * Build navigateFallbackAllowlist for the Vite `base` path so SPA deep links
+ * resolve to index.html offline. /api is excluded via denylist, not here.
+ *
+ * @example
+ * getNavigateFallbackAllowlist("/") // root SPA paths
+ * getNavigateFallbackAllowlist("/soundwave/") // base + nested paths only
  */
 export const getNavigateFallbackAllowlist = (appBase: string): RegExp[] => {
-  const base =
-    !appBase || appBase === "/" ? "" : appBase.endsWith("/") ? appBase.slice(0, -1) : appBase;
+  const base = normalizeViteAppBase(appBase);
 
   if (!base) {
-    // Match any path; /api is excluded via navigateFallbackDenylist in vite config.
     return [/^\/.*/];
   }
 

@@ -5,6 +5,7 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 import {
   OFFLINE_NAVIGATE_FALLBACK,
+  OFFLINE_NAVIGATE_FALLBACK_DENYLIST,
   OFFLINE_PRECACHE_GLOB_PATTERNS,
   OFFLINE_WORKBOX_CLIENTS_CLAIM,
   OFFLINE_WORKBOX_SKIP_WAITING,
@@ -128,7 +129,7 @@ export default defineConfig(({ mode }) => ({
         skipWaiting: OFFLINE_WORKBOX_SKIP_WAITING,
         navigateFallback: OFFLINE_NAVIGATE_FALLBACK,
         navigateFallbackAllowlist: getNavigateFallbackAllowlist(APP_BASE),
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [...OFFLINE_NAVIGATE_FALLBACK_DENYLIST],
       },
       devOptions: {
         enabled: true,
